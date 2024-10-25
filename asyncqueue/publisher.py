@@ -1,3 +1,4 @@
+import itertools
 from collections.abc import Sequence
 from typing import Any
 
@@ -12,10 +13,16 @@ class Configuration:
         self,
         *,
         default_serialization_backend: SerializationBackend[Any],
-        serialization_backends: Sequence[SerializationBackend[Any]],
+        serialization_backends: Sequence[SerializationBackend[Any]] | None = None,
     ) -> None:
         self.default_serialization_backend = default_serialization_backend
-        self.serialization_backends = {b.id: b for b in serialization_backends}
+        self.serialization_backends = {
+            backend.id: backend
+            for backend in itertools.chain(
+                serialization_backends or (),
+                (default_serialization_backend,),
+            )
+        }
 
 
 class Publisher:
