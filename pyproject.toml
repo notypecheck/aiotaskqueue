@@ -1,5 +1,5 @@
 [project]
-name = "task-queue"
+name = "asyncqueue"
 version = "0.1.0"
 description = ""
 readme = "README.md"
