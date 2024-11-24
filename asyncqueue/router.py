@@ -16,11 +16,20 @@ class TaskRouter:
         params: TaskParams,
     ) -> Callable[[Callable[P, Awaitable[TResult]]], TaskDefinition[P, TResult]]:
         def inner(func: Callable[P, Awaitable[TResult]]) -> TaskDefinition[P, TResult]:
-            task = TaskDefinition(params=params, func=func)
-            self.tasks[task.params.name] = task
-            return task
+            instance = task(params)(func)
+            self.tasks[instance.params.name] = instance
+            return instance
 
         return inner
 
     def include(self, router: TaskRouter) -> None:
         self.tasks.update(router.tasks)
+
+
+def task(
+    params: TaskParams,
+) -> Callable[[Callable[P, Awaitable[TResult]]], TaskDefinition[P, TResult]]:
+    def inner(func: Callable[P, Awaitable[TResult]]) -> TaskDefinition[P, TResult]:
+        return TaskDefinition(params=params, func=func)
+
+    return inner

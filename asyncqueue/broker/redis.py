@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import dataclasses
 import logging
@@ -38,17 +39,20 @@ class RedisBroker(Broker):
         redis: RedisClient,
         config: RedisBrokerConfig | None = None,
         consumer_name: str,
+        max_concurrency: int = 20,
     ) -> None:
         self._redis = redis
         self._config = config or RedisBrokerConfig()
         self._consumer_name = consumer_name
         self._task_ids: dict[str, bytes] = {}
+        self._sem = asyncio.Semaphore(max_concurrency)
 
     async def enqueue(self, task: TaskRecord) -> None:
-        await self._redis.xadd(
-            self._config.stream_name,
-            {"value": msgspec.json.encode(task)},
-        )
+        async with self._sem:
+            await self._redis.xadd(
+                self._config.stream_name,
+                {"value": msgspec.json.encode(task)},
+            )
 
     @contextlib.asynccontextmanager
     async def context(self) -> AsyncIterator[Self]:
