@@ -23,7 +23,12 @@ class TaskRouter:
         return inner
 
     def include(self, router: TaskRouter) -> None:
-        self.tasks.update(router.tasks)
+        for task in router.tasks.values():
+            existing_task = self.tasks.get(task.params.name)
+            if existing_task and existing_task.func is not task.func:
+                msg = f"Task {task!r} already registered"
+                raise ValueError(msg)
+            self.tasks[task.params.name] = task
 
 
 def task(
