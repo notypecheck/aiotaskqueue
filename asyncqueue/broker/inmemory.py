@@ -1,5 +1,5 @@
-import contextlib
 from collections.abc import AsyncIterator
+from types import TracebackType
 from typing import Self
 
 import anyio
@@ -14,12 +14,19 @@ class InMemoryBroker(Broker):
             max_buffer_size=max_buffer_size,
         )
 
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        pass
+
     async def enqueue(self, task: TaskRecord) -> None:
         await self._send.send(task)
-
-    @contextlib.asynccontextmanager
-    async def context(self) -> AsyncIterator[Self]:
-        yield self
 
     def listen(self) -> AsyncIterator[TaskRecord]:
         return self._recv

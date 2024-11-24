@@ -24,7 +24,7 @@ class AsyncWorker:
     async def run(self) -> None:
         send, recv = anyio.create_memory_object_stream[TaskRecord](max_buffer_size=10)
 
-        async with self._broker.context(), self._tg as tg, send:
+        async with self._broker, self._tg as tg, send:
             for _ in range(self._concurrency):
                 tg.start_soon(self._worker, recv.clone())
 
