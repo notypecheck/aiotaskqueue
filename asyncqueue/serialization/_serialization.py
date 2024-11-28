@@ -37,9 +37,10 @@ def serialize(
     return default_backend.id, default_backend.serialize(value)
 
 
-class TaskRecord(msgspec.Struct):
+class TaskRecord(msgspec.Struct, kw_only=True):
     id: str
     task_name: str
+    requeue_count: int = 0
     enqueue_time: datetime
     args: list[tuple[SerializationBackendId, bytes]]
     kwargs: dict[str, tuple[SerializationBackendId, bytes]]

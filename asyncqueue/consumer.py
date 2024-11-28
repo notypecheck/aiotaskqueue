@@ -1,3 +1,5 @@
+import asyncio
+
 import anyio.abc
 from anyio.streams.memory import MemoryObjectReceiveStream
 
@@ -24,11 +26,14 @@ class AsyncWorker:
         self._configuration = configuration
         self._concurrency = concurrency
         self._tg = anyio.create_task_group()
+        self._stop = asyncio.Event()
 
     async def run(self) -> None:
         send, recv = anyio.create_memory_object_stream[TaskRecord]()
 
         async with self._broker, self._tg as tg, send:
+            tg.start_soon(self._broker.run_worker_maintenance_tasks, self._stop)
+
             for _ in range(self._concurrency):
                 tg.start_soon(self._worker, recv.clone())
 

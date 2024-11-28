@@ -22,7 +22,7 @@ else:
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class RedisBrokerConfig:
-    stream_name: Annotated[str, Doc("")] = "async-queue"
+    stream_name: Annotated[str, Doc("Stream name in redis (key name)")] = "async-queue"
     group_name: Annotated[
         str,
         Doc(
@@ -36,12 +36,12 @@ class RedisBrokerConfig:
         Doc("Amount of entries to receive from stream at once"),
     ] = 1
     reclaim_time: timedelta = timedelta(seconds=5)
-    min_idle_time: timedelta = timedelta(seconds=10)
-
-    def __post_init__(self) -> None:
-        if self.min_idle_time <= self.xread_block_time:
-            msg = "min_idle_time should be larger than block_time"
-            raise ValueError(msg)
+    requeue_interval: Annotated[
+        timedelta,
+        Doc(
+            "The time that task should be not ACKed for to be rescheduled after being read by worker"
+        ),
+    ] = timedelta(seconds=10)
 
 
 class RedisBroker(Broker):
@@ -59,10 +59,7 @@ class RedisBroker(Broker):
         self._task_ids: dict[str, bytes] = {}
         self._sem = asyncio.Semaphore(max_concurrency)
 
-        self._tg = anyio.create_task_group()
-        self._is_closing = asyncio.Event()
-
-        self._is_open = False
+        self._is_initialized = False
 
     async def enqueue(self, task: TaskRecord) -> None:
         async with self._sem:
@@ -72,7 +69,7 @@ class RedisBroker(Broker):
             )
 
     async def __aenter__(self) -> Self:
-        if self._is_open:
+        if self._is_initialized:
             return self
 
         stream_exists = await self._redis.exists(self._config.stream_name) != 0
@@ -96,9 +93,7 @@ class RedisBroker(Broker):
             self._config.group_name,
             self._consumer_name,
         )
-        await self._tg.__aenter__()
-        self._tg.start_soon(self._claim_running_tasks_worker)
-        self._is_open = True
+        self._is_initialized = True
         return self
 
     async def __aexit__(
@@ -107,15 +102,10 @@ class RedisBroker(Broker):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        if self._is_closing.is_set():
-            return
-
-        self._is_closing.set()
-        await self._tg.__aexit__(exc_type, exc_val, exc_tb)
+        pass
 
     async def listen(self) -> AsyncIterator[TaskRecord]:
         while True:
-            claimed_records = await self._claim_pending_records()
             xread = await self._redis.xreadgroup(
                 self._config.group_name,
                 self._consumer_name,
@@ -130,16 +120,16 @@ class RedisBroker(Broker):
                     logging.debug(task)
                     yield task
 
-            for stream in claimed_records:
-                for record_id, record in stream:
-                    task = msgspec.json.decode(record[b"value"], type=TaskRecord)
-                    self._task_ids[task.id] = record_id
-                    logging.debug(task)
-                    yield task
+    async def run_worker_maintenance_tasks(self, stop: asyncio.Event) -> None:
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(self._maintenance_claim_running_tasks_worker, stop)
+            tg.start_soon(self._maintenance_claim_pending_records, stop)
 
-    async def _claim_running_tasks_worker(self) -> None:
-        """Reclaims owned messages."""
-        closes = asyncio.create_task(self._is_closing.wait())
+    async def _maintenance_claim_running_tasks_worker(
+        self, stop: asyncio.Event
+    ) -> None:
+        """Reclaims owned messages so they don't get collected by other workers."""
+        closes = asyncio.create_task(stop.wait())
         while True:
             if self._task_ids:
                 await self._redis.xclaim(  # type: ignore[no-untyped-call]
@@ -156,36 +146,44 @@ class RedisBroker(Broker):
             await asyncio.wait(
                 {closes, sleep_task}, return_when=asyncio.FIRST_COMPLETED
             )
-            if self._is_closing.is_set():
+            if stop.is_set():
                 return
 
-    async def _claim_pending_records(
+    async def _maintenance_claim_pending_records(
         self,
-    ) -> list[list[tuple[bytes, dict[bytes, bytes]]]]:
-        consumers = await self._redis.xinfo_consumers(  # type: ignore[no-untyped-call]
-            self._config.stream_name,
-            self._config.group_name,
-        )
-
-        messages = []
-        to_claim = self._config.xread_count
-        for consumer in consumers:
+        stop: asyncio.Event,
+    ) -> None:
+        """Requeues messages that weren't ACKed in time."""
+        stop_task = asyncio.create_task(stop.wait())
+        while True:
             claimed = await self._redis.xautoclaim(
                 self._config.stream_name,
                 self._config.group_name,
-                consumer["name"],
-                count=to_claim,
-                min_idle_time=int(self._config.min_idle_time.total_seconds() * 1000),
+                self._consumer_name,
+                count=1000,
+                min_idle_time=int(self._config.requeue_interval.total_seconds() * 1000),
             )
             logging.debug("Claimed %s", claimed)
 
-            _, *topic_messages = claimed
-            messages.extend(topic_messages)
-            to_claim -= len(topic_messages)
-            if to_claim <= 0:
-                break
+            _, messages, _ = claimed
+            for record_id, record in messages:
+                task = msgspec.json.decode(record[b"value"], type=TaskRecord)
+                task.requeue_count += 1
+                await self.enqueue(task)
+                await self._redis.xack(  # type: ignore[no-untyped-call]
+                    self._config.stream_name,
+                    self._config.group_name,
+                    record_id,
+                )
 
-        return messages
+            sleep_task = asyncio.create_task(
+                asyncio.sleep(self._config.requeue_interval.total_seconds())
+            )
+            await asyncio.wait(
+                {stop_task, sleep_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if stop.is_set():
+                return
 
     async def ack(self, task: TaskRecord) -> None:
         record_id = self._task_ids.pop(task.id)

@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from types import TracebackType
 from typing import Protocol, Self
@@ -20,3 +21,5 @@ class Broker(Protocol):
     def listen(self) -> AsyncIterator[TaskRecord]: ...
 
     async def ack(self, task: TaskRecord) -> None: ...
+
+    async def run_worker_maintenance_tasks(self, stop: asyncio.Event) -> None: ...
