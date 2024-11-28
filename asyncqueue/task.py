@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Awaitable, Callable
-from typing import Any, Generic
+from typing import TYPE_CHECKING, Any, Generic
 
 from asyncqueue._types import P, TResult
-from asyncqueue.scheduler.abc import Schedule
+
+if TYPE_CHECKING:
+    from asyncqueue.scheduler.abc import Schedule
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

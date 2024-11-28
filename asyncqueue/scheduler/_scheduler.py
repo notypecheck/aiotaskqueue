@@ -6,8 +6,11 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from asyncqueue._util import extract_tasks
+
 if TYPE_CHECKING:
     from asyncqueue.publisher import Publisher
+    from asyncqueue.router import TaskRouter
     from asyncqueue.task import TaskDefinition
 
 
@@ -15,16 +18,18 @@ class Scheduler:
     def __init__(
         self,
         publisher: Publisher,
-        tasks: Sequence[TaskDefinition[Any, Any]],
+        tasks: TaskRouter | Sequence[TaskDefinition[Any, Any]],
         *,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self.tasks: Mapping[str, TaskDefinition[Any, Any]] = {
-            task.params.name: task for task in tasks
+            task.params.name: task
+            for task in extract_tasks(tasks)
+            if task.params.schedule
         }
         self._publisher = publisher
         self._scheduled_tasks: PriorityQueue[tuple[datetime, str]] = PriorityQueue(
-            maxsize=len(tasks),
+            maxsize=len(self.tasks),
         )
         self._sleep = sleep
 
