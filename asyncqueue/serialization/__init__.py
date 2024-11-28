@@ -1,5 +1,6 @@
 from ._serialization import (
     SerializationBackend,
+    SerializationBackendId,
     TaskRecord,
     deserialize_task,
     serialize,
@@ -8,6 +9,7 @@ from ._serialization import (
 
 __all__ = [
     "SerializationBackend",
+    "SerializationBackendId",
     "TaskRecord",
     "deserialize_task",
     "serialize",

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Awaitable, Callable
-from typing import Generic
+from typing import Any, Generic
 
 from asyncqueue._types import P, TResult
 
@@ -30,3 +30,9 @@ class TaskInstance(Generic[P, TResult]):
     task: TaskDefinition[P, TResult]
     args: P.args
     kwargs: P.kwargs
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class RunningTask(Generic[TResult]):
+    id: str
+    instance: TaskInstance[Any, TResult]
