@@ -5,7 +5,7 @@ from typing import Any
 from asyncqueue._types import P, TResult
 from asyncqueue.broker.abc import Broker
 from asyncqueue.serialization import SerializationBackend, serialize_task
-from asyncqueue.task import TaskInstance
+from asyncqueue.task import RunningTask, TaskInstance
 
 
 class Configuration:
@@ -30,10 +30,11 @@ class Publisher:
         self._broker = broker
         self._config = config
 
-    async def enqueue(self, task: TaskInstance[P, TResult]) -> None:
+    async def enqueue(self, task: TaskInstance[P, TResult]) -> RunningTask[TResult]:
         record = serialize_task(
             task,
             default_backend=self._config.default_serialization_backend,
             serialization_backends=self._config.serialization_backends,
         )
         await self._broker.enqueue(record)
+        return RunningTask(instance=task, id=record.id)

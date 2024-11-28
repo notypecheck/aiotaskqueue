@@ -4,11 +4,12 @@ import logging
 from collections.abc import AsyncIterator
 from datetime import timedelta
 from types import TracebackType
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Annotated, Self
 
 import anyio
 import msgspec.json
 from redis.asyncio import Redis
+from typing_extensions import Doc
 
 from asyncqueue.broker.abc import Broker
 from asyncqueue.serialization import TaskRecord
@@ -21,15 +22,24 @@ else:
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class RedisBrokerConfig:
-    stream_name: str = "async-queue"
-    group_name: str = "default"
-    block_time: timedelta = timedelta(seconds=1)
-    poll_count: int = 10
+    stream_name: Annotated[str, Doc("")] = "async-queue"
+    group_name: Annotated[
+        str,
+        Doc(
+            "Redis stream group name."
+            "https://redis.io/docs/latest/commands/xgroup-create/"
+        ),
+    ] = "default"
+    xread_block_time: timedelta = timedelta(seconds=1)
+    xread_count: Annotated[
+        int,
+        Doc("Amount of entries to receive from stream at once"),
+    ] = 1
     reclaim_time: timedelta = timedelta(seconds=5)
     min_idle_time: timedelta = timedelta(seconds=10)
 
     def __post_init__(self) -> None:
-        if self.min_idle_time <= self.block_time:
+        if self.min_idle_time <= self.xread_block_time:
             msg = "min_idle_time should be larger than block_time"
             raise ValueError(msg)
 
@@ -106,13 +116,12 @@ class RedisBroker(Broker):
     async def listen(self) -> AsyncIterator[TaskRecord]:
         while True:
             claimed_records = await self._claim_pending_records()
-
             xread = await self._redis.xreadgroup(
                 self._config.group_name,
                 self._consumer_name,
                 {self._config.stream_name: ">"},
-                count=self._config.poll_count,
-                block=int(self._config.block_time.total_seconds()),
+                count=self._config.xread_count,
+                block=int(self._config.xread_block_time.total_seconds() * 1000),
             )
             for _, records in xread:
                 for record_id, record in records:
@@ -159,7 +168,7 @@ class RedisBroker(Broker):
         )
 
         messages = []
-        to_claim = self._config.poll_count
+        to_claim = self._config.xread_count
         for consumer in consumers:
             claimed = await self._redis.xautoclaim(
                 self._config.stream_name,
