@@ -24,4 +24,5 @@ async def test_ack(broker: InMemoryBroker) -> None:
         args=[],
         kwargs={},
     )
-    await broker.ack(task=task)
+    async with broker.ack_context(task):
+        pass

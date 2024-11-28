@@ -1,5 +1,7 @@
 import asyncio
+import contextlib
 from collections.abc import AsyncIterator
+from contextlib import AbstractAsyncContextManager
 from types import TracebackType
 from typing import Self
 
@@ -32,8 +34,11 @@ class InMemoryBroker(Broker):
     def listen(self) -> AsyncIterator[TaskRecord]:
         return self._recv
 
-    async def ack(self, task: TaskRecord) -> None:
-        pass
+    def ack_context(
+        self,
+        task: TaskRecord,  # noqa: ARG002
+    ) -> AbstractAsyncContextManager[None]:
+        return contextlib.nullcontext()
 
     async def run_worker_maintenance_tasks(self, stop: asyncio.Event) -> None:
         pass

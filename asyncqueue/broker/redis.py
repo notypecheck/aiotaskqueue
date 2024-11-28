@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import dataclasses
 import logging
 from collections.abc import AsyncIterator
@@ -185,11 +186,18 @@ class RedisBroker(Broker):
             if stop.is_set():
                 return
 
-    async def ack(self, task: TaskRecord) -> None:
-        record_id = self._task_ids.pop(task.id)
-        await self._redis.xack(  # type: ignore[no-untyped-call]
-            self._config.stream_name,
-            self._config.group_name,
-            record_id,
-        )
-        logging.info("Acked %s", task.id)
+    @contextlib.asynccontextmanager
+    async def ack_context(self, task: TaskRecord) -> AsyncIterator[None]:
+        try:
+            yield
+        except Exception:
+            self._task_ids.pop(task.id, None)
+            raise
+        else:
+            record_id = self._task_ids.pop(task.id)
+            await self._redis.xack(  # type: ignore[no-untyped-call]
+                self._config.stream_name,
+                self._config.group_name,
+                record_id,
+            )
+            logging.info("Acked %s", task.id)

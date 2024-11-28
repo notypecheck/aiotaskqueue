@@ -42,11 +42,11 @@ class AsyncWorker:
 
     async def _worker(self, recv: MemoryObjectReceiveStream[TaskRecord]) -> None:
         async for task in recv:
-            task_definition = self._tasks.tasks[task.task_name]
-            args, kwargs = deserialize_task(
-                task, self._configuration.serialization_backends
-            )
-            result = await task_definition.func(*args, **kwargs)
-            await self._broker.ack(task)
+            async with self._broker.ack_context(task):
+                task_definition = self._tasks.tasks[task.task_name]
+                args, kwargs = deserialize_task(
+                    task, self._configuration.serialization_backends
+                )
+                result = await task_definition.func(*args, **kwargs)
             if self._result_backend:
                 await self._result_backend.set(task_id=task.id, value=result)
