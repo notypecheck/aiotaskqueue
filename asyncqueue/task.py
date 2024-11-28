@@ -5,11 +5,13 @@ from collections.abc import Awaitable, Callable
 from typing import Generic
 
 from asyncqueue._types import P, TResult
+from asyncqueue.scheduler.abc import Schedule
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TaskParams:
     name: str
+    schedule: Schedule | None = None
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

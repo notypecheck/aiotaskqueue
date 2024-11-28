@@ -5,6 +5,7 @@ from _pytest.fixtures import SubRequest
 
 pytest_plugins = [
     "anyio",
+    "tests.fixtures",
 ]
 
 

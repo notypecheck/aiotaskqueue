@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import uuid
 from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
 from typing import Any, Generic, NewType
 
 import msgspec
@@ -39,6 +40,7 @@ def serialize(
 class TaskRecord(msgspec.Struct):
     id: str
     task_name: str
+    enqueue_time: datetime
     args: list[tuple[SerializationBackendId, bytes]]
     kwargs: dict[str, tuple[SerializationBackendId, bytes]]
 
@@ -70,6 +72,7 @@ def serialize_task(
     return TaskRecord(
         id=str(uuid.uuid4()),
         task_name=task.task.params.name,
+        enqueue_time=datetime.now(UTC),
         args=args,
         kwargs=kwargs,
     )
