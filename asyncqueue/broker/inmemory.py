@@ -3,9 +3,9 @@ import contextlib
 from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager
 from types import TracebackType
-from typing import Self
 
 import anyio
+from typing_extensions import Self
 
 from asyncqueue.broker.abc import Broker
 from asyncqueue.serialization import TaskRecord

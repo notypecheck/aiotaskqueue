@@ -2,7 +2,9 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager
 from types import TracebackType
-from typing import Protocol, Self
+from typing import Protocol
+
+from typing_extensions import Self
 
 from asyncqueue.serialization import TaskRecord
 

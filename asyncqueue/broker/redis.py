@@ -5,12 +5,12 @@ import logging
 from collections.abc import AsyncIterator
 from datetime import timedelta
 from types import TracebackType
-from typing import TYPE_CHECKING, Annotated, Self
+from typing import TYPE_CHECKING, Annotated
 
 import anyio
 import msgspec.json
 from redis.asyncio import Redis
-from typing_extensions import Doc
+from typing_extensions import Doc, Self
 
 from asyncqueue.broker.abc import Broker
 from asyncqueue.serialization import TaskRecord

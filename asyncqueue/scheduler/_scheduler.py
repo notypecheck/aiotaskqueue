@@ -3,10 +3,10 @@ from __future__ import annotations
 import asyncio
 from asyncio import PriorityQueue
 from collections.abc import Awaitable, Callable, Mapping, Sequence
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from asyncqueue._util import extract_tasks
+from asyncqueue._util import extract_tasks, utc_now
 
 if TYPE_CHECKING:
     from asyncqueue.publisher import Publisher
@@ -38,17 +38,17 @@ class Scheduler:
         while not self._scheduled_tasks.empty():
             schedule_datetime, scheduled_task_name = await self._scheduled_tasks.get()
 
-            sleep_seconds = (schedule_datetime - datetime.now(tz=UTC)).total_seconds()
+            sleep_seconds = (schedule_datetime - utc_now()).total_seconds()
 
             await self._sleep(max(sleep_seconds, 0))
 
             scheduled_task = self.tasks[scheduled_task_name]
             await self._publisher.enqueue(scheduled_task())
 
-            await self._schedule_task(scheduled_task, datetime.now(tz=UTC))
+            await self._schedule_task(scheduled_task, utc_now())
 
     async def _initial_scheduled_tasks(self) -> None:
-        now = datetime.now(tz=UTC)
+        now = utc_now()
         for task in self.tasks.values():
             await self._schedule_task(task, now)
 

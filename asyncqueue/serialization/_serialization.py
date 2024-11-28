@@ -3,12 +3,13 @@ from __future__ import annotations
 import dataclasses
 import uuid
 from collections.abc import Callable, Mapping
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Generic, NewType
 
 import msgspec
 
 from asyncqueue._types import TResult
+from asyncqueue._util import utc_now
 from asyncqueue.task import TaskInstance
 
 Deserializer = Callable[[bytes], TResult]
@@ -73,7 +74,7 @@ def serialize_task(
     return TaskRecord(
         id=str(uuid.uuid4()),
         task_name=task.task.params.name,
-        enqueue_time=datetime.now(UTC),
+        enqueue_time=utc_now(),
         args=args,
         kwargs=kwargs,
     )

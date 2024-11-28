@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from asyncqueue.broker.inmemory import InMemoryBroker
@@ -10,7 +10,7 @@ from freezegun import freeze_time
 
 from tests.utils import capture_broker_messages
 
-BASE_DATETIME = datetime(2000, 1, 1, tzinfo=UTC)
+BASE_DATETIME = datetime(2000, 1, 1, tzinfo=timezone.utc)
 
 
 @task(TaskParams(name="every-task", schedule=every(timedelta(minutes=5))))
