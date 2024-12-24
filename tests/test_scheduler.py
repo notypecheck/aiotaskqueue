@@ -5,7 +5,7 @@ from asyncqueue.broker.inmemory import InMemoryBroker
 from asyncqueue.publisher import Publisher
 from asyncqueue.router import task
 from asyncqueue.scheduler import Scheduler, crontab, every
-from asyncqueue.task import TaskParams
+from asyncqueue.tasks import TaskParams
 from freezegun import freeze_time
 
 from tests.utils import capture_broker_messages
@@ -79,4 +79,4 @@ async def test_scheduler(
     datetime_ = BASE_DATETIME
     for message in messages:
         datetime_ = every_.next_schedule(datetime_)
-        assert message.enqueue_time == datetime_
+        assert message.task.enqueue_time == datetime_

@@ -8,12 +8,14 @@ import anyio
 from typing_extensions import Self
 
 from asyncqueue.broker.abc import Broker
+from asyncqueue.config import Configuration
 from asyncqueue.serialization import TaskRecord
+from asyncqueue.tasks import BrokerTask
 
 
 class InMemoryBroker(Broker):
     def __init__(self, max_buffer_size: int) -> None:
-        self._send, self._recv = anyio.create_memory_object_stream[TaskRecord](
+        self._send, self._recv = anyio.create_memory_object_stream[BrokerTask[object]](
             max_buffer_size=max_buffer_size,
         )
 
@@ -29,16 +31,21 @@ class InMemoryBroker(Broker):
         pass
 
     async def enqueue(self, task: TaskRecord) -> None:
-        await self._send.send(task)
+        await self._send.send(BrokerTask(task=task, meta=None))
 
-    def listen(self) -> AsyncIterator[TaskRecord]:
+    def listen(self) -> AsyncIterator[BrokerTask[object]]:
         return self._recv
 
     def ack_context(
         self,
-        task: TaskRecord,  # noqa: ARG002
+        task: BrokerTask[object],  # noqa: ARG002
     ) -> AbstractAsyncContextManager[None]:
         return contextlib.nullcontext()
 
-    async def run_worker_maintenance_tasks(self, stop: asyncio.Event) -> None:
+    async def run_worker_maintenance_tasks(
+        self, stop: asyncio.Event, config: Configuration
+    ) -> None:
+        pass
+
+    async def tasks_healthcheck(self, *tasks: BrokerTask[object]) -> None:
         pass

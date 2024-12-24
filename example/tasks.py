@@ -1,7 +1,6 @@
+from asyncqueue import TaskParams, TaskRouter
 from asyncqueue._util import utc_now
-from asyncqueue.router import TaskRouter
 from asyncqueue.scheduler import crontab
-from asyncqueue.task import TaskParams
 
 router = TaskRouter()
 
@@ -23,3 +22,4 @@ async def send_email(message: str, address: str) -> str:
 )
 async def periodic_task() -> str:
     print("Periodic task", utc_now())
+    return str(utc_now())

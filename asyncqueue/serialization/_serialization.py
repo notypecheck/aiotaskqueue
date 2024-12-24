@@ -10,7 +10,7 @@ import msgspec
 
 from asyncqueue._types import TResult
 from asyncqueue._util import utc_now
-from asyncqueue.task import TaskInstance
+from asyncqueue.tasks import TaskInstance
 
 Deserializer = Callable[[bytes], TResult]
 Serializer = Callable[[TResult], bytes]

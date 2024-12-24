@@ -1,7 +1,8 @@
 import pytest
 from asyncqueue.broker.abc import Broker
 from asyncqueue.broker.inmemory import InMemoryBroker
-from asyncqueue.publisher import Configuration, Publisher
+from asyncqueue.config import Configuration
+from asyncqueue.publisher import Publisher
 from asyncqueue.serialization.msgspec import MsgSpecSerializer
 
 

@@ -4,7 +4,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
 from asyncqueue._types import P, TResult
-from asyncqueue.task import TaskDefinition, TaskParams
+from asyncqueue.tasks import TaskDefinition, TaskParams
 
 
 class TaskRouter:

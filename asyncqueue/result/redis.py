@@ -3,10 +3,10 @@ from typing import cast
 
 from asyncqueue._types import TResult
 from asyncqueue.broker.redis import RedisClient
-from asyncqueue.publisher import Configuration
+from asyncqueue.config import Configuration
 from asyncqueue.result.abc import ResultBackend
 from asyncqueue.serialization import SerializationBackendId, serialize
-from asyncqueue.task import RunningTask
+from asyncqueue.tasks import RunningTask
 
 
 class RedisResultBackend(ResultBackend):

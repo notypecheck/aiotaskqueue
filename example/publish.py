@@ -1,14 +1,12 @@
 import asyncio
 import time
 
-from asyncqueue.publisher import Publisher
-from example._components import create_broker, configuration
+from example._components import broker, publisher, redis
 from example.tasks import send_email
 
 
 async def main() -> None:
-    async with create_broker() as broker:
-        publisher = Publisher(broker=broker, config=configuration)
+    async with redis, broker:
         t = time.perf_counter()
         await asyncio.gather(
             *[

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from asyncqueue._types import P, TResult
 
 if TYPE_CHECKING:
     from asyncqueue.scheduler.abc import Schedule
+    from asyncqueue.serialization import TaskRecord
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -40,3 +41,12 @@ class TaskInstance(Generic[P, TResult]):
 class RunningTask(Generic[TResult]):
     id: str
     instance: TaskInstance[Any, TResult]
+
+
+_TBrokerMeta = TypeVar("_TBrokerMeta")
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class BrokerTask(Generic[_TBrokerMeta]):
+    meta: _TBrokerMeta
+    task: TaskRecord

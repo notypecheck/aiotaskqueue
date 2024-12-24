@@ -1,11 +1,12 @@
 import asyncio
 import contextlib
 from collections.abc import AsyncIterator
+from typing import Any
 
 import anyio
 import anyio.lowlevel
 from asyncqueue.broker.inmemory import InMemoryBroker
-from asyncqueue.serialization import TaskRecord
+from asyncqueue.tasks import BrokerTask
 
 SOME_MAGIC_WAIT_TIME = 0.1
 
@@ -13,8 +14,8 @@ SOME_MAGIC_WAIT_TIME = 0.1
 @contextlib.asynccontextmanager
 async def capture_broker_messages(
     broker: InMemoryBroker,
-) -> AsyncIterator[list[TaskRecord]]:
-    messages: list[TaskRecord] = []
+) -> AsyncIterator[list[BrokerTask[Any]]]:
+    messages: list[BrokerTask[Any]] = []
     should_stop = asyncio.Event()
 
     async def capture() -> None:

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from asyncqueue.router import TaskRouter
-    from asyncqueue.task import TaskDefinition
+    from asyncqueue.tasks import TaskDefinition
 
 
 def utc_now() -> datetime:

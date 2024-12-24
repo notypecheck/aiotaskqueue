@@ -11,7 +11,7 @@ from asyncqueue._util import extract_tasks, utc_now
 if TYPE_CHECKING:
     from asyncqueue.publisher import Publisher
     from asyncqueue.router import TaskRouter
-    from asyncqueue.task import TaskDefinition
+    from asyncqueue.tasks import TaskDefinition
 
 
 class Scheduler:

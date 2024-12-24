@@ -1,28 +1,8 @@
-import itertools
-from collections.abc import Sequence
-from typing import Any
-
 from asyncqueue._types import P, TResult
 from asyncqueue.broker.abc import Broker
-from asyncqueue.serialization import SerializationBackend, serialize_task
-from asyncqueue.task import RunningTask, TaskInstance
-
-
-class Configuration:
-    def __init__(
-        self,
-        *,
-        default_serialization_backend: SerializationBackend[Any],
-        serialization_backends: Sequence[SerializationBackend[Any]] | None = None,
-    ) -> None:
-        self.default_serialization_backend = default_serialization_backend
-        self.serialization_backends = {
-            backend.id: backend
-            for backend in itertools.chain(
-                serialization_backends or (),
-                (default_serialization_backend,),
-            )
-        }
+from asyncqueue.config import Configuration
+from asyncqueue.serialization import serialize_task
+from asyncqueue.tasks import RunningTask, TaskInstance
 
 
 class Publisher:

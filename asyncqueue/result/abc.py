@@ -1,7 +1,7 @@
 from typing import Protocol
 
 from asyncqueue._types import TResult
-from asyncqueue.task import RunningTask
+from asyncqueue.tasks import RunningTask
 
 
 class ResultBackend(Protocol):

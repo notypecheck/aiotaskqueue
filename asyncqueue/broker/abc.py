@@ -2,11 +2,13 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager
 from types import TracebackType
-from typing import Protocol
+from typing import Any, Protocol
 
 from typing_extensions import Self
 
+from asyncqueue.config import Configuration
 from asyncqueue.serialization import TaskRecord
+from asyncqueue.tasks import BrokerTask
 
 
 class Broker(Protocol):
@@ -21,8 +23,17 @@ class Broker(Protocol):
         exc_tb: TracebackType | None,
     ) -> None: ...
 
-    def listen(self) -> AsyncIterator[TaskRecord]: ...
+    def listen(self) -> AsyncIterator[BrokerTask[Any]]: ...
 
-    def ack_context(self, task: TaskRecord) -> AbstractAsyncContextManager[None]: ...
+    def ack_context(
+        self,
+        task: BrokerTask[Any],
+    ) -> AbstractAsyncContextManager[None]: ...
 
-    async def run_worker_maintenance_tasks(self, stop: asyncio.Event) -> None: ...
+    async def run_worker_maintenance_tasks(
+        self,
+        stop: asyncio.Event,
+        config: Configuration,
+    ) -> None: ...
+
+    async def tasks_healthcheck(self, *tasks: BrokerTask[Any]) -> None: ...

@@ -13,12 +13,19 @@ from redis.asyncio import Redis
 from typing_extensions import Doc, Self
 
 from asyncqueue.broker.abc import Broker
+from asyncqueue.config import Configuration
 from asyncqueue.serialization import TaskRecord
+from asyncqueue.tasks import BrokerTask
 
 if TYPE_CHECKING:
     RedisClient = Redis[bytes]
 else:
     RedisClient = Redis
+
+
+@dataclasses.dataclass(kw_only=True, slots=True)
+class RedisMeta:
+    id: str
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -36,13 +43,6 @@ class RedisBrokerConfig:
         int,
         Doc("Amount of entries to receive from stream at once"),
     ] = 1
-    reclaim_time: timedelta = timedelta(seconds=5)
-    requeue_interval: Annotated[
-        timedelta,
-        Doc(
-            "The time that task should be not ACKed for to be rescheduled after being read by worker"
-        ),
-    ] = timedelta(seconds=10)
 
 
 class RedisBroker(Broker):
@@ -50,14 +50,13 @@ class RedisBroker(Broker):
         self,
         *,
         redis: RedisClient,
-        config: RedisBrokerConfig | None = None,
+        broker_config: RedisBrokerConfig | None = None,
         consumer_name: str,
         max_concurrency: int = 20,
     ) -> None:
         self._redis = redis
-        self._config = config or RedisBrokerConfig()
+        self._broker_config = broker_config or RedisBrokerConfig()
         self._consumer_name = consumer_name
-        self._task_ids: dict[str, bytes] = {}
         self._sem = asyncio.Semaphore(max_concurrency)
 
         self._is_initialized = False
@@ -65,7 +64,7 @@ class RedisBroker(Broker):
     async def enqueue(self, task: TaskRecord) -> None:
         async with self._sem:
             await self._redis.xadd(
-                self._config.stream_name,
+                self._broker_config.stream_name,
                 {"value": msgspec.json.encode(task)},
             )
 
@@ -73,25 +72,27 @@ class RedisBroker(Broker):
         if self._is_initialized:
             return self
 
-        stream_exists = await self._redis.exists(self._config.stream_name) != 0
+        stream_exists = await self._redis.exists(self._broker_config.stream_name) != 0
         group_exists = (
-            self._config.group_name
+            self._broker_config.group_name
             in (
                 info["name"].decode()
-                for info in await self._redis.xinfo_groups(self._config.stream_name)  # type: ignore[no-untyped-call]
+                for info in await self._redis.xinfo_groups(
+                    self._broker_config.stream_name
+                )  # type: ignore[no-untyped-call]
             )
             if stream_exists
             else False
         )
         if not stream_exists or not group_exists:
             await self._redis.xgroup_create(
-                self._config.stream_name,
-                self._config.group_name,
+                name=self._broker_config.stream_name,
+                groupname=self._broker_config.group_name,
                 mkstream=True,
             )
         await self._redis.xgroup_createconsumer(  # type: ignore[no-untyped-call]
-            self._config.stream_name,
-            self._config.group_name,
+            self._broker_config.stream_name,
+            self._broker_config.group_name,
             self._consumer_name,
         )
         self._is_initialized = True
@@ -105,64 +106,50 @@ class RedisBroker(Broker):
     ) -> None:
         pass
 
-    async def listen(self) -> AsyncIterator[TaskRecord]:
+    async def listen(self) -> AsyncIterator[BrokerTask[RedisMeta]]:
         while True:
             xread = await self._redis.xreadgroup(
-                self._config.group_name,
+                self._broker_config.group_name,
                 self._consumer_name,
-                {self._config.stream_name: ">"},
-                count=self._config.xread_count,
-                block=int(self._config.xread_block_time.total_seconds() * 1000),
+                {self._broker_config.stream_name: ">"},
+                count=self._broker_config.xread_count,
+                block=int(self._broker_config.xread_block_time.total_seconds() * 1000),
             )
             for _, records in xread:
                 for record_id, record in records:
                     task = msgspec.json.decode(record[b"value"], type=TaskRecord)
-                    self._task_ids[task.id] = record_id
                     logging.debug(task)
-                    yield task
+                    yield BrokerTask(
+                        task=task,
+                        meta=RedisMeta(id=record_id),
+                    )
 
-    async def run_worker_maintenance_tasks(self, stop: asyncio.Event) -> None:
-        async with anyio.create_task_group() as tg:
-            tg.start_soon(self._maintenance_claim_running_tasks_worker, stop)
-            tg.start_soon(self._maintenance_claim_pending_records, stop)
-
-    async def _maintenance_claim_running_tasks_worker(
-        self, stop: asyncio.Event
+    async def run_worker_maintenance_tasks(
+        self,
+        stop: asyncio.Event,
+        config: Configuration,
     ) -> None:
-        """Reclaims owned messages so they don't get collected by other workers."""
-        closes = asyncio.create_task(stop.wait())
-        while True:
-            if self._task_ids:
-                await self._redis.xclaim(  # type: ignore[no-untyped-call]
-                    self._config.stream_name,
-                    self._config.group_name,
-                    self._consumer_name,
-                    min_idle_time=0,
-                    message_ids=tuple(self._task_ids.values()),
-                )
-
-            sleep_task = asyncio.create_task(
-                asyncio.sleep(self._config.reclaim_time.total_seconds())
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(
+                self._maintenance_claim_pending_records,
+                stop,
+                config.task.timeout_interval,
             )
-            await asyncio.wait(
-                {closes, sleep_task}, return_when=asyncio.FIRST_COMPLETED
-            )
-            if stop.is_set():
-                return
 
     async def _maintenance_claim_pending_records(
         self,
         stop: asyncio.Event,
+        timeout_interval: timedelta,
     ) -> None:
         """Requeues messages that weren't ACKed in time."""
         stop_task = asyncio.create_task(stop.wait())
         while True:
             claimed = await self._redis.xautoclaim(
-                self._config.stream_name,
-                self._config.group_name,
+                self._broker_config.stream_name,
+                self._broker_config.group_name,
                 self._consumer_name,
                 count=1000,
-                min_idle_time=int(self._config.requeue_interval.total_seconds() * 1000),
+                min_idle_time=int(timeout_interval.total_seconds() * 1000),
             )
             logging.debug("Claimed %s", claimed)
 
@@ -172,13 +159,13 @@ class RedisBroker(Broker):
                 task.requeue_count += 1
                 await self.enqueue(task)
                 await self._redis.xack(  # type: ignore[no-untyped-call]
-                    self._config.stream_name,
-                    self._config.group_name,
+                    self._broker_config.stream_name,
+                    self._broker_config.group_name,
                     record_id,
                 )
 
             sleep_task = asyncio.create_task(
-                asyncio.sleep(self._config.requeue_interval.total_seconds())
+                asyncio.sleep(timeout_interval.total_seconds())
             )
             await asyncio.wait(
                 {stop_task, sleep_task}, return_when=asyncio.FIRST_COMPLETED
@@ -187,17 +174,21 @@ class RedisBroker(Broker):
                 return
 
     @contextlib.asynccontextmanager
-    async def ack_context(self, task: TaskRecord) -> AsyncIterator[None]:
-        try:
-            yield
-        except Exception:
-            self._task_ids.pop(task.id, None)
-            raise
-        else:
-            record_id = self._task_ids.pop(task.id)
-            await self._redis.xack(  # type: ignore[no-untyped-call]
-                self._config.stream_name,
-                self._config.group_name,
-                record_id,
-            )
-            logging.info("Acked %s", task.id)
+    async def ack_context(self, task: BrokerTask[RedisMeta]) -> AsyncIterator[None]:
+        yield
+        await self._redis.xack(  # type: ignore[no-untyped-call]
+            self._broker_config.stream_name,
+            self._broker_config.group_name,
+            task.meta.id,
+        )
+        logging.info("Acked %s, redis id %s", task.task.id, task.meta.id)
+
+    async def tasks_healthcheck(self, *tasks: BrokerTask[RedisMeta]) -> None:
+        task_ids = [task.meta.id for task in tasks]
+        await self._redis.xclaim(  # type: ignore[no-untyped-call]
+            self._broker_config.stream_name,
+            self._broker_config.group_name,
+            self._consumer_name,
+            min_idle_time=0,
+            message_ids=task_ids,
+        )

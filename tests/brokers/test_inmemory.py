@@ -4,6 +4,7 @@ import pytest
 from asyncqueue._util import utc_now
 from asyncqueue.broker.inmemory import InMemoryBroker
 from asyncqueue.serialization import TaskRecord
+from asyncqueue.tasks import BrokerTask
 
 
 @pytest.fixture
@@ -24,5 +25,5 @@ async def test_ack(broker: InMemoryBroker) -> None:
         args=[],
         kwargs={},
     )
-    async with broker.ack_context(task):
+    async with broker.ack_context(BrokerTask(task=task, meta=None)):
         pass

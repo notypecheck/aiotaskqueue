@@ -1,8 +1,9 @@
 from asyncqueue.broker.inmemory import InMemoryBroker
-from asyncqueue.publisher import Configuration, Publisher
+from asyncqueue.config import Configuration
+from asyncqueue.publisher import Publisher
 from asyncqueue.router import task
 from asyncqueue.serialization import deserialize_task
-from asyncqueue.task import TaskParams
+from asyncqueue.tasks import TaskParams
 
 from tests.utils import capture_broker_messages
 
@@ -25,7 +26,7 @@ async def test_enqueue(broker: InMemoryBroker, publisher: Publisher) -> None:
 
     assert len(messages) == 1
     message = messages[0]
-    assert message.task_name == target_task.params.name
+    assert message.task.task_name == target_task.params.name
 
 
 async def test_enqueue_with_params(
@@ -40,9 +41,9 @@ async def test_enqueue_with_params(
             await publisher.enqueue(task_to_publish)
 
     for task_, message in zip(tasks, messages, strict=True):
-        assert message.task_name == task_with_params.params.name
+        assert message.task.task_name == task_with_params.params.name
         args, kwargs = deserialize_task(
-            message,
+            message.task,
             serialization_backends=configuration.serialization_backends,
         )
         assert task_.args == args
