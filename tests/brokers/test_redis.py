@@ -1,5 +1,7 @@
+import asyncio
 import uuid
 from collections.abc import AsyncIterator
+from datetime import datetime
 
 import pytest
 import time_machine
@@ -9,7 +11,7 @@ from asyncqueue.serialization import deserialize_task, serialize_task
 from asyncqueue.serialization.msgspec import MsgSpecSerializer
 from testcontainers.redis import AsyncRedisContainer  # type: ignore[import-untyped]
 
-from tests.tasks import task_with_params
+from tests.tasks import noop_task, task_with_params
 from tests.utils import capture_broker_messages
 
 
@@ -63,7 +65,13 @@ async def test_broker_init(redis: RedisClient) -> None:
         pass
 
 
-async def test_enqueue(redis_broker: RedisBroker) -> None:
+async def test_enter_twice_is_ok(redis: RedisClient) -> None:
+    broker = RedisBroker(redis=redis, consumer_name="pytest")
+    async with broker, broker:
+        pass
+
+
+async def test_enqueue(redis_broker: RedisBroker, now: datetime) -> None:
     serializer = MsgSpecSerializer()
 
     tasks = [task_with_params(i, b=str(i)) for i in range(10)]
@@ -91,3 +99,31 @@ async def test_enqueue(redis_broker: RedisBroker) -> None:
 
         assert broker_task.task.enqueue_time == now
         assert broker_task.task.task_name == task_instance.task.params.name
+
+
+@pytest.mark.parametrize("count", [1, 5, 10])
+async def test_listen(redis_broker: RedisBroker, count: int) -> None:
+    serializer = MsgSpecSerializer()
+
+    expected_tasks = [
+        serialize_task(
+            task=noop_task(),
+            default_backend=serializer,
+            serialization_backends={serializer.id: serializer},
+        )
+        for _ in range(count)
+    ]
+
+    async def add_test_tasks() -> None:
+        for task_record in expected_tasks:
+            await redis_broker.enqueue(task_record)
+
+    result = []
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(add_test_tasks())
+        async for task in redis_broker.listen():
+            result.append(task)
+            if len(result) == count:
+                break
+
+    assert [r.task for r in result] == expected_tasks
