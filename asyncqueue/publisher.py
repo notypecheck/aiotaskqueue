@@ -6,7 +6,11 @@ from asyncqueue.tasks import RunningTask, TaskInstance
 
 
 class Publisher:
-    def __init__(self, broker: Broker, config: Configuration) -> None:
+    def __init__(
+        self,
+        broker: Broker,
+        config: Configuration,
+    ) -> None:
         self._broker = broker
         self._config = config
 

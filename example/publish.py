@@ -2,7 +2,7 @@ import asyncio
 import time
 
 from example._components import broker, publisher, redis
-from example.tasks import send_email
+from example.tasks import Email, Person, send_email
 
 
 async def main() -> None:
@@ -13,14 +13,15 @@ async def main() -> None:
                 asyncio.create_task(
                     publisher.enqueue(
                         task=send_email(
-                            address=f"user{i}@example.com", message=f"Message {i}"
+                            person=Person(id=42, name="Name"),
+                            email=Email(text="Email contents", cc=["different-email"]),
                         )
                     )
                 )
                 for i in range(1000)
             ]
         )
-        print(time.perf_counter() - t)
+        print(time.perf_counter() - t)  # noqa: T201
 
 
 if __name__ == "__main__":

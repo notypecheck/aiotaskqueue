@@ -43,5 +43,5 @@ class RedisResultBackend(ResultBackend):
         backend_id, value = raw_value.split(b",")
         deserialized = self._config.serialization_backends[
             SerializationBackendId(backend_id.decode())
-        ].deserialize(value)
+        ].deserialize(value=value, type=task.instance.task.return_type)
         return cast(TResult, deserialized)

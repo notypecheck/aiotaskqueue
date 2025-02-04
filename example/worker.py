@@ -2,7 +2,8 @@ import asyncio
 import logging
 
 from asyncqueue.consumer import AsyncWorker
-from example._components import broker, configuration, result_backend, redis
+
+from example._components import broker, configuration, redis, result_backend
 from example.tasks import router
 
 

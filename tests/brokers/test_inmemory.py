@@ -22,7 +22,7 @@ async def test_ack(broker: InMemoryBroker) -> None:
         id=str(uuid.uuid4()),
         enqueue_time=utc_now(),
         task_name="some-name",
-        args=[],
+        args=(),
         kwargs={},
     )
     async with broker.ack_context(BrokerTask(task=task, meta=None)):

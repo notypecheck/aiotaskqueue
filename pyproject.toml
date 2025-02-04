@@ -3,7 +3,7 @@ name = "asyncqueue"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "anyio>=4.6.2.post1",
     "msgspec>=0.18.6",
@@ -18,22 +18,42 @@ scheduler = [
     "croniter>=5.0.1",
 ]
 
-[tool.uv]
-dev-dependencies = [
-    "coverage>=7.6.4",
-    "deptry>=0.20.0",
-    "freezegun>=1.5.1",
+[dependency-groups]
+docs = [
+    "griffe-typingdoc>=0.2.7",
+    "mkdocs-autorefs>=1.2.0",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.5.46",
-    "mypy>=1.13.0",
+    "mkdocstrings[python]>=0.27.0",
+    "black>=24.10.0",
+]
+test = [
+    "coverage>=7.6.4",
     "pytest>=8.3.3",
-    "ruff>=0.8.0",
+    "time-machine>=2.16.0",
     "trio>=0.27.0",
+]
+linters = [
+    "deptry>=0.20.0",
+    "mypy>=1.13.0",
+    "ruff>=0.8.0",
+]
+types = [
     "types-croniter>=4.0.0.20241030",
     "types-redis>=4.6.0.20241004",
-    "mkdocstrings[python]>=0.27.0",
+]
+dev = [
+    "pydantic>=2.10.4",
+    "testcontainers>=4.9.0",
 ]
 
+[tool.uv]
+default-groups = [
+    "docs",
+    "test",
+    "linters",
+    "types",
+]
 
 [tool.coverage.run]
 source = ["asyncqueue"]
@@ -41,11 +61,18 @@ command_line = "-m pytest -vv"
 branch = true
 
 [tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "class .*\\(.*\\bProtocol\\b.*\\):",
+    "@(?:typing\\.)?overload",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
 show_missing = true
 skip_covered = true
 skip_empty = true
 precision = 2
-#fail_under = 100
+fail_under = 100
 
 [tool.pytest.ini_options]
 pythonpath = [
@@ -55,7 +82,7 @@ pythonpath = [
 
 [tool.mypy]
 plugins = []
-python_version = "3.10"
+python_version = "3.11"
 
 strict = true
 follow_imports = "normal"
@@ -78,7 +105,7 @@ show_error_codes = true
 
 [tool.ruff]
 src = ["src", "tests"]
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 fixable = [
@@ -110,3 +137,13 @@ ignore = [
 ]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
+"docs/*" = ["INP001"]
+
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["type"]
+
+
+[tool.deptry.per_rule_ignores]
+DEP003 = [
+    "pydantic",
+]

@@ -5,12 +5,12 @@ import logging
 from collections.abc import AsyncIterator
 from datetime import timedelta
 from types import TracebackType
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Self
 
 import anyio
 import msgspec.json
 from redis.asyncio import Redis
-from typing_extensions import Doc, Self
+from typing_extensions import Doc
 
 from asyncqueue.broker.abc import Broker
 from asyncqueue.config import Configuration
@@ -34,14 +34,16 @@ class RedisBrokerConfig:
     group_name: Annotated[
         str,
         Doc(
-            "Redis stream group name."
-            "https://redis.io/docs/latest/commands/xgroup-create/"
+            "Redis stream group name, there usually shouldn't be a need to change it. "
+            "See <https://redis.io/docs/latest/commands/xgroup-create/>"
         ),
     ] = "default"
-    xread_block_time: timedelta = timedelta(seconds=1)
+    xread_block_time: Annotated[
+        timedelta, Doc("BLOCK parameter passed to redis XREAD command")
+    ] = timedelta(seconds=1)
     xread_count: Annotated[
         int,
-        Doc("Amount of entries to receive from stream at once"),
+        Doc("Amount of entries to read from stream at once"),
     ] = 1
 
 
@@ -49,10 +51,22 @@ class RedisBroker(Broker):
     def __init__(
         self,
         *,
-        redis: RedisClient,
-        broker_config: RedisBrokerConfig | None = None,
-        consumer_name: str,
-        max_concurrency: int = 20,
+        redis: Annotated[RedisClient, Doc("Instance of redis")],
+        broker_config: Annotated[
+            RedisBrokerConfig | None, Doc("Redis specific configuration")
+        ] = None,
+        consumer_name: Annotated[
+            str,
+            Doc(
+                r"Name of stream consumer, if you run multiple workers you'd need to change that. "
+                "<https://redis.io/docs/latest/develop/data-types/streams/#consumer-groups> and "
+                "<https://redis.io/docs/latest/develop/data-types/streams/#differences-with-kafka-tm-partitions>"
+            ),
+        ],
+        max_concurrency: Annotated[
+            int,
+            Doc("Max amount of tasks being concurrently added into redis stream"),
+        ] = 20,
     ) -> None:
         self._redis = redis
         self._broker_config = broker_config or RedisBrokerConfig()
@@ -60,6 +74,7 @@ class RedisBroker(Broker):
         self._sem = asyncio.Semaphore(max_concurrency)
 
         self._is_initialized = False
+        self._stop = asyncio.Event()
 
     async def enqueue(self, task: TaskRecord) -> None:
         async with self._sem:
@@ -104,18 +119,34 @@ class RedisBroker(Broker):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        pass
+        self._stop.set()
 
     async def listen(self) -> AsyncIterator[BrokerTask[RedisMeta]]:
+        stop_task = asyncio.create_task(self._stop.wait())
+
         while True:
-            xread = await self._redis.xreadgroup(
-                self._broker_config.group_name,
-                self._consumer_name,
-                {self._broker_config.stream_name: ">"},
-                count=self._broker_config.xread_count,
-                block=int(self._broker_config.xread_block_time.total_seconds() * 1000),
+            if self._stop.is_set():
+                return
+
+            xread_task = asyncio.create_task(
+                self._redis.xreadgroup(
+                    self._broker_config.group_name,
+                    self._consumer_name,
+                    {self._broker_config.stream_name: ">"},
+                    count=self._broker_config.xread_count,
+                    block=int(
+                        self._broker_config.xread_block_time.total_seconds() * 1000
+                    ),
+                )
             )
-            for _, records in xread:
+            await asyncio.wait(
+                {stop_task, xread_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if self._stop.is_set() and not xread_task.done():
+                xread_task.cancel()
+                return
+
+            for _, records in xread_task.result():
                 for record_id, record in records:
                     task = msgspec.json.decode(record[b"value"], type=TaskRecord)
                     logging.debug(task)

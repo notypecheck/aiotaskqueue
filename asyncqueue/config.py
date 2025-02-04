@@ -24,12 +24,19 @@ class TaskConfiguration:
 
 
 class Configuration:
+    """Configuration is a semi-global object that defines behavior shared between different components, such as serialization, plugins and timeouts."""
+
     def __init__(
         self,
         *,
-        task: TaskConfiguration | None = None,
-        default_serialization_backend: SerializationBackend[Any],
-        serialization_backends: Sequence[SerializationBackend[Any]] | None = None,
+        task: Annotated[TaskConfiguration | None, Doc("task configuration")] = None,
+        default_serialization_backend: Annotated[
+            SerializationBackend[Any], Doc("default SerializationBackend")
+        ],
+        serialization_backends: Annotated[
+            Sequence[SerializationBackend[Any]] | None,
+            Doc("list of serialization backends in order of priority"),
+        ] = None,
     ) -> None:
         self.task = task or TaskConfiguration()
         self.default_serialization_backend: Final = default_serialization_backend

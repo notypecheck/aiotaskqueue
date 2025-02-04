@@ -1,17 +1,22 @@
 import asyncio
-import uuid
 
-from example._components import publisher, result_backend, broker
-from example.tasks import send_email
+from example._components import broker, publisher, result_backend
+from example.tasks import Email, Person, send_email
 
 
 async def main() -> None:
     async with broker:
         task = await publisher.enqueue(
-            task=send_email(message=f"Email {uuid.uuid4()}", address="email-address")
+            task=send_email(
+                person=Person(id=42, name="Name"),
+                email=Email(
+                    text="Email text",
+                    cc=["one@example.org", "second@example.org"],
+                ),
+            )
         )
         result = await result_backend.wait(task)
-        print(result)
+        print(result)  # noqa: T201
 
 
 if __name__ == "__main__":

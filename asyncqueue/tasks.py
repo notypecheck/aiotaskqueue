@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Awaitable, Callable
+import inspect
+import typing
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from asyncqueue._types import P, TResult
@@ -17,7 +20,7 @@ class TaskParams:
     schedule: Schedule | None = None
 
 
-@dataclasses.dataclass(slots=True, kw_only=True)
+@dataclasses.dataclass(kw_only=True)
 class TaskDefinition(Generic[P, TResult]):
     params: TaskParams
     func: Callable[P, Awaitable[TResult]]
@@ -28,6 +31,20 @@ class TaskDefinition(Generic[P, TResult]):
             args=args,
             kwargs=kwargs,
         )
+
+    @cached_property
+    def return_type(self) -> type:
+        return typing.get_type_hints(self.func).get("return")  # type: ignore[return-value]
+
+    @cached_property
+    def arg_types(self) -> Sequence[type[object]]:
+        sig = inspect.signature(self.func)
+        return tuple(p.annotation for p in sig.parameters.values())
+
+    @cached_property
+    def kwarg_types(self) -> Mapping[str, type[object]]:
+        sig = inspect.signature(self.func)
+        return {p.name: p.annotation for p in sig.parameters.values()}
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)

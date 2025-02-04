@@ -8,7 +8,9 @@ from asyncqueue.serialization.msgspec import MsgSpecSerializer
 
 @pytest.fixture(scope="session")
 def configuration() -> Configuration:
-    return Configuration(default_serialization_backend=MsgSpecSerializer)
+    return Configuration(
+        default_serialization_backend=MsgSpecSerializer(),
+    )
 
 
 @pytest.fixture

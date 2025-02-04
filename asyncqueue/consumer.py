@@ -27,7 +27,6 @@ class AsyncWorker:
         self._tasks = tasks
         self._configuration = configuration
         self._concurrency = concurrency
-        self._tg = anyio.create_task_group()
         self._stop = asyncio.Event()
 
         self._active_tasks: dict[str, BrokerTask[Any]] = {}
@@ -35,7 +34,7 @@ class AsyncWorker:
     async def run(self) -> None:
         send, recv = anyio.create_memory_object_stream[BrokerTask[object]]()
 
-        async with self._broker, self._tg as tg, send:
+        async with self._broker, anyio.create_task_group() as tg, send:
             tg.start_soon(
                 self._broker.run_worker_maintenance_tasks,
                 self._stop,
@@ -57,7 +56,9 @@ class AsyncWorker:
             async with self._broker.ack_context(broker_task):
                 task_definition = self._tasks.tasks[task.task_name]
                 args, kwargs = deserialize_task(
-                    task, self._configuration.serialization_backends
+                    task_definition=task_definition,
+                    task=task,
+                    serialization_backends=self._configuration.serialization_backends,
                 )
                 result = await task_definition.func(*args, **kwargs)
 
