@@ -127,6 +127,7 @@ ignore = [
     "D203", # one-blank-line-before-class
     "D212", # multi-line-summary-first-line
     "PD", # pandas-vet
+    "A005",
     "TC001",
     "TC002",
     "TC003",
@@ -145,5 +146,8 @@ builtins-ignorelist = ["type"]
 
 [tool.deptry.per_rule_ignores]
 DEP003 = [
+    "pydantic",
+]
+DEP004 = [
     "pydantic",
 ]

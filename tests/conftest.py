@@ -1,3 +1,4 @@
+import pkgutil
 from datetime import datetime
 from typing import cast
 
@@ -5,9 +6,18 @@ import pytest
 from _pytest.fixtures import SubRequest
 from asyncqueue._util import utc_now
 
+import tests.plugins
+
 pytest_plugins = [
     "anyio",
-    "tests.fixtures",
+    *(
+        mod.name
+        for mod in pkgutil.walk_packages(
+            tests.plugins.__path__,
+            prefix="tests.plugins.",
+        )
+        if not mod.ispkg
+    ),
 ]
 
 

@@ -1,6 +1,6 @@
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator
+from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
 from types import TracebackType
 from typing import Self
@@ -33,8 +33,8 @@ class InMemoryBroker(Broker):
     async def enqueue(self, task: TaskRecord) -> None:
         await self._send.send(BrokerTask(task=task, meta=None))
 
-    def listen(self) -> AsyncIterator[BrokerTask[object]]:
-        return self._recv
+    async def read(self) -> Sequence[BrokerTask[object]]:
+        return (await self._recv.receive(),)
 
     def ack_context(
         self,
@@ -43,9 +43,14 @@ class InMemoryBroker(Broker):
         return contextlib.nullcontext()
 
     async def run_worker_maintenance_tasks(
-        self, stop: asyncio.Event, config: Configuration
-    ) -> None:
+        self,
+        stop: asyncio.Event,
+        config: Configuration,
+    ) -> None:  # pragma: no cover
         pass
 
-    async def tasks_healthcheck(self, *tasks: BrokerTask[object]) -> None:
+    async def tasks_healthcheck(
+        self,
+        *tasks: BrokerTask[object],
+    ) -> None:  # pragma: no cover
         pass

@@ -1,8 +1,11 @@
 import asyncio
+import contextlib
+import signal
+from collections.abc import AsyncIterator
 from typing import Any
 
 import anyio.abc
-from anyio.streams.memory import MemoryObjectReceiveStream
+from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
 from asyncqueue.broker.abc import Broker
 from asyncqueue.config import Configuration
@@ -27,26 +30,74 @@ class AsyncWorker:
         self._tasks = tasks
         self._configuration = configuration
         self._concurrency = concurrency
-        self._stop = asyncio.Event()
+        self._stop_event = asyncio.Event()
 
         self._active_tasks: dict[str, BrokerTask[Any]] = {}
 
     async def run(self) -> None:
         send, recv = anyio.create_memory_object_stream[BrokerTask[object]]()
 
-        async with self._broker, anyio.create_task_group() as tg, send:
-            tg.start_soon(
-                self._broker.run_worker_maintenance_tasks,
-                self._stop,
-                self._configuration,
+        signal.signal(
+            signal.SIGTERM,
+            lambda signalnum, handler, send_=send: self._stop(send=send_),  # type: ignore[misc]  # noqa: ARG005
+        )
+        signal.signal(
+            signal.SIGINT,
+            lambda signalnum, handler, send_=send: self._stop(send=send_),  # type: ignore[misc]  # noqa: ARG005
+        )
+
+        tasks: list[asyncio.Task[object]] = []
+        async with (
+            self._broker,
+            send,
+            asyncio.TaskGroup() as tg,
+            self._shutdown_tasks(send=send, tasks=tasks),
+        ):
+            tasks.append(
+                tg.create_task(
+                    self._broker.run_worker_maintenance_tasks(
+                        stop=self._stop_event, config=self._configuration
+                    ),
+                )
             )
-            tg.start_soon(self._claim_pending_tasks, self._stop)
+            tasks.append(
+                tg.create_task(self._claim_pending_tasks(stop=self._stop_event))
+            )
 
-            for _ in range(self._concurrency):
-                tg.start_soon(self._worker, recv.clone())
+            tasks.extend(
+                tg.create_task(self._worker(recv=recv.clone()))
+                for _ in range(self._concurrency)
+            )
+            stop_task = asyncio.create_task(self._stop_event.wait())
+            while True:
+                read_task = asyncio.create_task(self._broker.read())
+                await asyncio.wait(
+                    {stop_task, read_task},
+                    return_when=asyncio.ALL_COMPLETED,
+                )
+                if not read_task.done():
+                    read_task.cancel()
+                    break
 
-            async for message in self._broker.listen():
-                await send.send(message)
+                for message in await self._broker.read():
+                    await send.send(message)
+                await asyncio.sleep(0)
+                if self._stop_event.is_set():
+                    break
+
+    @contextlib.asynccontextmanager
+    async def _shutdown_tasks(
+        self, send: MemoryObjectSendStream[Any], tasks: list[asyncio.Task[object]]
+    ) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            self._stop(send)
+            await asyncio.wait(tasks)
+
+    def _stop(self, send: MemoryObjectSendStream[Any]) -> None:
+        self._stop_event.set()
+        send.close()
 
     async def _worker(self, recv: MemoryObjectReceiveStream[BrokerTask[Any]]) -> None:
         async for broker_task in recv:

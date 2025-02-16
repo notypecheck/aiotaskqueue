@@ -2,12 +2,11 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from datetime import timedelta
 from types import TracebackType
 from typing import TYPE_CHECKING, Annotated, Self
 
-import anyio
 import msgspec.json
 from redis.asyncio import Redis
 from typing_extensions import Doc
@@ -121,50 +120,37 @@ class RedisBroker(Broker):
     ) -> None:
         self._stop.set()
 
-    async def listen(self) -> AsyncIterator[BrokerTask[RedisMeta]]:
-        stop_task = asyncio.create_task(self._stop.wait())
-
-        while True:
-            if self._stop.is_set():
-                return
-
-            xread_task = asyncio.create_task(
-                self._redis.xreadgroup(
-                    self._broker_config.group_name,
-                    self._consumer_name,
-                    {self._broker_config.stream_name: ">"},
-                    count=self._broker_config.xread_count,
-                    block=int(
-                        self._broker_config.xread_block_time.total_seconds() * 1000
-                    ),
-                )
-            )
-            await asyncio.wait(
-                {stop_task, xread_task}, return_when=asyncio.FIRST_COMPLETED
-            )
-            if self._stop.is_set() and not xread_task.done():
-                xread_task.cancel()
-                return
-
-            for _, records in xread_task.result():
-                for record_id, record in records:
-                    task = msgspec.json.decode(record[b"value"], type=TaskRecord)
-                    logging.debug(task)
-                    yield BrokerTask(
+    async def read(self) -> Sequence[BrokerTask[RedisMeta]]:
+        xread_result = await self._redis.xreadgroup(
+            self._broker_config.group_name,
+            self._consumer_name,
+            {self._broker_config.stream_name: ">"},
+            count=self._broker_config.xread_count,
+            block=int(self._broker_config.xread_block_time.total_seconds() * 1000),
+        )
+        result = []
+        for _, records in xread_result:
+            for record_id, record in records:
+                task = msgspec.json.decode(record[b"value"], type=TaskRecord)
+                result.append(
+                    BrokerTask(
                         task=task,
                         meta=RedisMeta(id=record_id),
                     )
+                )
+        return result
 
     async def run_worker_maintenance_tasks(
         self,
         stop: asyncio.Event,
         config: Configuration,
     ) -> None:
-        async with anyio.create_task_group() as tg:
-            tg.start_soon(
-                self._maintenance_claim_pending_records,
-                stop,
-                config.task.timeout_interval,
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(
+                self._maintenance_claim_pending_records(
+                    stop=stop,
+                    timeout_interval=config.task.timeout_interval,
+                ),
             )
 
     async def _maintenance_claim_pending_records(

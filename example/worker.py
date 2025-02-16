@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from asyncqueue.consumer import AsyncWorker
+from asyncqueue.worker import AsyncWorker
 
 from example._components import broker, configuration, redis, result_backend
 from example.tasks import router

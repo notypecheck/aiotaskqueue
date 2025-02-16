@@ -5,3 +5,9 @@ services:
     image: valkey/valkey:8.0.1
     ports:
       - "6379:6379"
+
+
+  asyncqueue:
+    build: .
+
+    entrypoint: ["python", "-m", "example.worker"]

@@ -50,8 +50,11 @@ class TaskDefinition(Generic[P, TResult]):
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class TaskInstance(Generic[P, TResult]):
     task: TaskDefinition[P, TResult]
-    args: P.args
-    kwargs: P.kwargs
+    # It doesn't seem to be possible to type args and kwargs here:
+    # https://peps.python.org/pep-0612/#id1
+    # https://github.com/python/mypy/pull/18278
+    args: tuple[object, ...]
+    kwargs: Mapping[str, object]
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)

@@ -34,13 +34,10 @@ class RedisResultBackend(ResultBackend):
         *,
         poll_interval: float = 0.1,
     ) -> TResult:
-        while True:
-            if not (raw_value := await self._redis.get(f"{task.id}-result")):
-                await asyncio.sleep(poll_interval)
-                continue
-            break
+        while not (raw_value := await self._redis.get(f"{task.id}-result")):  # noqa: ASYNC110
+            await asyncio.sleep(poll_interval)
 
-        backend_id, value = raw_value.split(b",")
+        backend_id, value = raw_value.split(b",", maxsplit=1)
         deserialized = self._config.serialization_backends[
             SerializationBackendId(backend_id.decode())
         ].deserialize(value=value, type=task.instance.task.return_type)
