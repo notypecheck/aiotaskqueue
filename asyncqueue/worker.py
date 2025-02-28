@@ -73,7 +73,7 @@ class AsyncWorker:
                 read_task = asyncio.create_task(self._broker.read())
                 await asyncio.wait(
                     {stop_task, read_task},
-                    return_when=asyncio.ALL_COMPLETED,
+                    return_when=asyncio.FIRST_COMPLETED,
                 )
                 if not read_task.done():
                     read_task.cancel()
