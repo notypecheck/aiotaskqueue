@@ -171,15 +171,16 @@ class RedisBroker(Broker):
             logging.debug("Claimed %s", claimed)
 
             _, messages, _ = claimed
-            for record_id, record in messages:
+            for _, record in messages:
                 task = msgspec.json.decode(record[b"value"], type=TaskRecord)
                 task.requeue_count += 1
                 await self.enqueue(task)
-                await self._redis.xack(  # type: ignore[no-untyped-call]
-                    self._broker_config.stream_name,
-                    self._broker_config.group_name,
-                    record_id,
-                )
+
+            await self._redis.xack(  # type: ignore[no-untyped-call]
+                self._broker_config.stream_name,
+                self._broker_config.group_name,
+                [msg[0] for msg in messages],
+            )
 
             sleep_task = asyncio.create_task(
                 asyncio.sleep(timeout_interval.total_seconds())

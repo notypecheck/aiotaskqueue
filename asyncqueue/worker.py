@@ -79,7 +79,7 @@ class AsyncWorker:
                     read_task.cancel()
                     break
 
-                for message in await self._broker.read():
+                for message in read_task.result():
                     await send.send(message)
                 await asyncio.sleep(0)
                 if self._stop_event.is_set():
