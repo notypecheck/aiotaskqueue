@@ -1,8 +1,8 @@
-from asyncqueue._types import P, TResult
-from asyncqueue.broker.abc import Broker
-from asyncqueue.config import Configuration
-from asyncqueue.serialization import serialize_task
-from asyncqueue.tasks import RunningTask, TaskInstance
+from aiotaskqueue._types import P, TResult
+from aiotaskqueue.broker.abc import Broker
+from aiotaskqueue.config import Configuration
+from aiotaskqueue.serialization import serialize_task
+from aiotaskqueue.tasks import RunningTask, TaskInstance
 
 
 class Publisher:

@@ -5,9 +5,9 @@ from contextlib import AbstractAsyncContextManager
 from types import TracebackType
 from typing import Any, Protocol, Self
 
-from asyncqueue.config import Configuration
-from asyncqueue.serialization import TaskRecord
-from asyncqueue.tasks import BrokerTask
+from aiotaskqueue.config import Configuration
+from aiotaskqueue.serialization import TaskRecord
+from aiotaskqueue.tasks import BrokerTask
 
 
 class Broker(Protocol):

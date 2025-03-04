@@ -1,7 +1,7 @@
 import asyncio
 
-from asyncqueue.publisher import Publisher
-from asyncqueue.scheduler import Scheduler
+from aiotaskqueue.publisher import Publisher
+from aiotaskqueue.scheduler import Scheduler
 
 from example._components import broker, configuration
 from example.tasks import router

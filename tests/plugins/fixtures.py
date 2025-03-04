@@ -1,9 +1,9 @@
 import pytest
-from asyncqueue.broker.abc import Broker
-from asyncqueue.broker.inmemory import InMemoryBroker
-from asyncqueue.config import Configuration
-from asyncqueue.publisher import Publisher
-from asyncqueue.serialization.msgspec import MsgSpecSerializer
+from aiotaskqueue.broker.abc import Broker
+from aiotaskqueue.broker.inmemory import InMemoryBroker
+from aiotaskqueue.config import Configuration
+from aiotaskqueue.publisher import Publisher
+from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
 
 
 @pytest.fixture(scope="session")

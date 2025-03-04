@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 
 import pytest
-from asyncqueue.broker.redis import RedisClient
+from aiotaskqueue.broker.redis import RedisClient
 from testcontainers.redis import AsyncRedisContainer  # type: ignore[import-untyped]
 
 

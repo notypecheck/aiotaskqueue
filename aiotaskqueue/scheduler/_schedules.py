@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from croniter import croniter
 
-from asyncqueue.scheduler.abc import Schedule
+from aiotaskqueue.scheduler.abc import Schedule
 
 
 @dataclasses.dataclass

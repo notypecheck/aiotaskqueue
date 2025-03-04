@@ -7,9 +7,9 @@ from typing import Any, ClassVar, NewType, Protocol
 
 import msgspec
 
-from asyncqueue._types import TResult
-from asyncqueue._util import utc_now
-from asyncqueue.tasks import TaskDefinition, TaskInstance
+from aiotaskqueue._types import TResult
+from aiotaskqueue._util import utc_now
+from aiotaskqueue.tasks import TaskDefinition, TaskInstance
 
 Deserializer = Callable[[bytes], TResult]
 Serializer = Callable[[TResult], bytes]

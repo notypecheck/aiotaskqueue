@@ -1,9 +1,9 @@
 from typing import Any
 
 import pytest
-from asyncqueue import TaskRouter
-from asyncqueue._util import extract_tasks
-from asyncqueue.tasks import TaskDefinition
+from aiotaskqueue import TaskRouter
+from aiotaskqueue._util import extract_tasks
+from aiotaskqueue.tasks import TaskDefinition
 
 from tests.tasks import noop_task, task_with_params
 

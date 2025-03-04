@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from asyncqueue.router import TaskRouter
-    from asyncqueue.tasks import TaskDefinition
+    from aiotaskqueue.router import TaskRouter
+    from aiotaskqueue.tasks import TaskDefinition
 
 
 def utc_now() -> datetime:
@@ -16,7 +16,7 @@ def utc_now() -> datetime:
 def extract_tasks(
     tasks: TaskRouter | Sequence[TaskDefinition[Any, Any]],
 ) -> Sequence[TaskDefinition[Any, Any]]:
-    from asyncqueue.router import TaskRouter
+    from aiotaskqueue.router import TaskRouter
 
     if isinstance(tasks, TaskRouter):
         return tuple(tasks.tasks.values())

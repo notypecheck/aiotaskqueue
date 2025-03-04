@@ -7,12 +7,12 @@ from typing import Any
 import anyio.abc
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
-from asyncqueue.broker.abc import Broker
-from asyncqueue.config import Configuration
-from asyncqueue.result.abc import ResultBackend
-from asyncqueue.router import TaskRouter
-from asyncqueue.serialization import deserialize_task
-from asyncqueue.tasks import BrokerTask
+from aiotaskqueue.broker.abc import Broker
+from aiotaskqueue.config import Configuration
+from aiotaskqueue.result.abc import ResultBackend
+from aiotaskqueue.router import TaskRouter
+from aiotaskqueue.serialization import deserialize_task
+from aiotaskqueue.tasks import BrokerTask
 
 
 class AsyncWorker:

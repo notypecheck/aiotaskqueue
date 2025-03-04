@@ -27,5 +27,5 @@ ENV PYTHONPATH=$PYTHONPATH:/app/src \
     PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1
 
-COPY ./asyncqueue ./asyncqueue
+COPY aiotaskqueue ./aiotaskqueue
 COPY ./example ./example

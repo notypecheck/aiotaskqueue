@@ -4,10 +4,10 @@ from datetime import datetime
 
 import pytest
 import time_machine
-from asyncqueue._util import utc_now
-from asyncqueue.broker.redis import RedisBroker, RedisBrokerConfig, RedisClient
-from asyncqueue.serialization import deserialize_task, serialize_task
-from asyncqueue.serialization.msgspec import MsgSpecSerializer
+from aiotaskqueue._util import utc_now
+from aiotaskqueue.broker.redis import RedisBroker, RedisBrokerConfig, RedisClient
+from aiotaskqueue.serialization import deserialize_task, serialize_task
+from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
 
 from tests.tasks import task_with_params
 from tests.utils import capture_broker_messages

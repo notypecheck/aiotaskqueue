@@ -1,6 +1,6 @@
 import pytest
-from asyncqueue.router import TaskRouter, task
-from asyncqueue.tasks import TaskParams
+from aiotaskqueue.router import TaskRouter, task
+from aiotaskqueue.tasks import TaskParams
 
 
 @task(TaskParams(name="name"))

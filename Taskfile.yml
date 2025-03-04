@@ -3,7 +3,7 @@ version: "3"
 vars:
   RUNNER:
     sh: 'echo {{ .RUNNER | default "uv run" }}'
-  SOURCES: asyncqueue tests example
+  SOURCES: aiotaskqueue tests example
   SOURCES_ROOT: .
 
 tasks:

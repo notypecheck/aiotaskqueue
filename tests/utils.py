@@ -4,8 +4,8 @@ from typing import Any
 
 import anyio
 import anyio.lowlevel
-from asyncqueue.broker.abc import Broker
-from asyncqueue.tasks import BrokerTask
+from aiotaskqueue.broker.abc import Broker
+from aiotaskqueue.tasks import BrokerTask
 
 SOME_MAGIC_WAIT_TIME = 0.1
 

@@ -1,4 +1,4 @@
-from asyncqueue import TaskParams, task
+from aiotaskqueue import TaskParams, task
 
 
 @task(TaskParams(name="test-task"))

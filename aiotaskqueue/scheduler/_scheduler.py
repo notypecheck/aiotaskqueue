@@ -6,12 +6,12 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from asyncqueue._util import extract_tasks, utc_now
+from aiotaskqueue._util import extract_tasks, utc_now
 
 if TYPE_CHECKING:
-    from asyncqueue.publisher import Publisher
-    from asyncqueue.router import TaskRouter
-    from asyncqueue.tasks import TaskDefinition
+    from aiotaskqueue.publisher import Publisher
+    from aiotaskqueue.router import TaskRouter
+    from aiotaskqueue.tasks import TaskDefinition
 
 
 class Scheduler:

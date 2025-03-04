@@ -1,7 +1,7 @@
 import msgspec
 from msgspec import Struct
 
-from asyncqueue._types import TResult
+from aiotaskqueue._types import TResult
 
 from ._serialization import SerializationBackend, SerializationBackendId
 

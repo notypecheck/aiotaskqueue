@@ -4,7 +4,7 @@ from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
-from asyncqueue._util import utc_now
+from aiotaskqueue._util import utc_now
 
 import tests.plugins
 

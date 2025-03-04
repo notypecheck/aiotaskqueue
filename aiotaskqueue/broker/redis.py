@@ -10,10 +10,10 @@ import msgspec.json
 from redis.asyncio import Redis
 from typing_extensions import Doc
 
-from asyncqueue.broker.abc import Broker, BrokerAckContextMixin
-from asyncqueue.config import Configuration
-from asyncqueue.serialization import TaskRecord
-from asyncqueue.tasks import BrokerTask
+from aiotaskqueue.broker.abc import Broker, BrokerAckContextMixin
+from aiotaskqueue.config import Configuration
+from aiotaskqueue.serialization import TaskRecord
+from aiotaskqueue.tasks import BrokerTask
 
 if TYPE_CHECKING:
     RedisClient = Redis[bytes]

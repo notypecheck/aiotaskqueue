@@ -4,11 +4,11 @@ from datetime import datetime
 
 import msgspec
 import pytest
-from asyncqueue import Configuration, TaskParams, task
-from asyncqueue.broker.redis import RedisClient
-from asyncqueue.result.abc import ResultBackend
-from asyncqueue.result.redis import RedisResultBackend
-from asyncqueue.tasks import RunningTask
+from aiotaskqueue import Configuration, TaskParams, task
+from aiotaskqueue.broker.redis import RedisClient
+from aiotaskqueue.result.abc import ResultBackend
+from aiotaskqueue.result.redis import RedisResultBackend
+from aiotaskqueue.tasks import RunningTask
 
 from tests.models import MsgspecModel
 

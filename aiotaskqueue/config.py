@@ -6,7 +6,7 @@ from typing import Annotated, Any, Final
 
 from typing_extensions import Doc
 
-from asyncqueue.serialization import SerializationBackend
+from aiotaskqueue.serialization import SerializationBackend
 
 
 @dataclasses.dataclass

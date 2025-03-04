@@ -7,11 +7,11 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from asyncqueue._types import P, TResult
+from aiotaskqueue._types import P, TResult
 
 if TYPE_CHECKING:
-    from asyncqueue.scheduler.abc import Schedule
-    from asyncqueue.serialization import TaskRecord
+    from aiotaskqueue.scheduler.abc import Schedule
+    from aiotaskqueue.serialization import TaskRecord
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

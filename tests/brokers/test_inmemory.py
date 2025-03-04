@@ -1,10 +1,10 @@
 import uuid
 
 import pytest
-from asyncqueue._util import utc_now
-from asyncqueue.broker.inmemory import InMemoryBroker
-from asyncqueue.serialization import TaskRecord
-from asyncqueue.tasks import BrokerTask
+from aiotaskqueue._util import utc_now
+from aiotaskqueue.broker.inmemory import InMemoryBroker
+from aiotaskqueue.serialization import TaskRecord
+from aiotaskqueue.tasks import BrokerTask
 
 
 @pytest.fixture

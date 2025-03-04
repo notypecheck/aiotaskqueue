@@ -4,11 +4,11 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import time_machine
-from asyncqueue.broker.inmemory import InMemoryBroker
-from asyncqueue.publisher import Publisher
-from asyncqueue.router import task
-from asyncqueue.scheduler import Scheduler, crontab, every
-from asyncqueue.tasks import TaskParams
+from aiotaskqueue.broker.inmemory import InMemoryBroker
+from aiotaskqueue.publisher import Publisher
+from aiotaskqueue.router import task
+from aiotaskqueue.scheduler import Scheduler, crontab, every
+from aiotaskqueue.tasks import TaskParams
 
 from tests.utils import capture_broker_messages
 

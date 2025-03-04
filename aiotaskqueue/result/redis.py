@@ -1,12 +1,12 @@
 import asyncio
 from typing import cast
 
-from asyncqueue._types import TResult
-from asyncqueue.broker.redis import RedisClient
-from asyncqueue.config import Configuration
-from asyncqueue.result.abc import ResultBackend
-from asyncqueue.serialization import SerializationBackendId, serialize
-from asyncqueue.tasks import RunningTask
+from aiotaskqueue._types import TResult
+from aiotaskqueue.broker.redis import RedisClient
+from aiotaskqueue.config import Configuration
+from aiotaskqueue.result.abc import ResultBackend
+from aiotaskqueue.serialization import SerializationBackendId, serialize
+from aiotaskqueue.tasks import RunningTask
 
 
 class RedisResultBackend(ResultBackend):

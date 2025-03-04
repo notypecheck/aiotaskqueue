@@ -7,10 +7,10 @@ import asyncio
 
 from redis.asyncio import Redis
 
-from asyncqueue import Configuration, Publisher, TaskRouter, TaskParams
-from asyncqueue.broker.redis import RedisBroker, RedisBrokerConfig
-from asyncqueue.serialization.msgspec import MsgSpecSerializer
-from asyncqueue.serialization.pydantic import PydanticSerializer
+from aiotaskqueue import Configuration, Publisher, TaskRouter, TaskParams
+from aiotaskqueue.broker.redis import RedisBroker, RedisBrokerConfig
+from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
+from aiotaskqueue.serialization.pydantic import PydanticSerializer
 
 router = TaskRouter()
 

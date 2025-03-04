@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
-from asyncqueue._types import P, TResult
-from asyncqueue.tasks import TaskDefinition, TaskParams
+from aiotaskqueue._types import P, TResult
+from aiotaskqueue.tasks import TaskDefinition, TaskParams
 
 
 class TaskRouter:

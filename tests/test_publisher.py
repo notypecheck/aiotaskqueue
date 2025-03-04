@@ -1,7 +1,7 @@
-from asyncqueue.broker.inmemory import InMemoryBroker
-from asyncqueue.config import Configuration
-from asyncqueue.publisher import Publisher
-from asyncqueue.serialization import deserialize_task
+from aiotaskqueue.broker.inmemory import InMemoryBroker
+from aiotaskqueue.config import Configuration
+from aiotaskqueue.publisher import Publisher
+from aiotaskqueue.serialization import deserialize_task
 
 from tests.tasks import noop_task, task_with_params
 from tests.utils import capture_broker_messages
