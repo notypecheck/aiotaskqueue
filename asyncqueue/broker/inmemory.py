@@ -1,19 +1,17 @@
 import asyncio
-import contextlib
 from collections.abc import Sequence
-from contextlib import AbstractAsyncContextManager
 from types import TracebackType
 from typing import Self
 
 import anyio
 
-from asyncqueue.broker.abc import Broker
+from asyncqueue.broker.abc import Broker, BrokerAckContextMixin
 from asyncqueue.config import Configuration
 from asyncqueue.serialization import TaskRecord
 from asyncqueue.tasks import BrokerTask
 
 
-class InMemoryBroker(Broker):
+class InMemoryBroker(BrokerAckContextMixin, Broker):
     def __init__(self, max_buffer_size: int) -> None:
         self._send, self._recv = anyio.create_memory_object_stream[BrokerTask[object]](
             max_buffer_size=max_buffer_size,
@@ -36,11 +34,8 @@ class InMemoryBroker(Broker):
     async def read(self) -> Sequence[BrokerTask[object]]:
         return (await self._recv.receive(),)
 
-    def ack_context(
-        self,
-        task: BrokerTask[object],  # noqa: ARG002
-    ) -> AbstractAsyncContextManager[None]:
-        return contextlib.nullcontext()
+    async def ack(self, task: BrokerTask[object]) -> None:
+        pass
 
     async def run_worker_maintenance_tasks(
         self,

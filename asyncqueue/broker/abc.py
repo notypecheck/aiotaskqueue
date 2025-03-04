@@ -1,5 +1,6 @@
 import asyncio
-from collections.abc import Sequence
+import contextlib
+from collections.abc import AsyncIterator, Sequence
 from contextlib import AbstractAsyncContextManager
 from types import TracebackType
 from typing import Any, Protocol, Self
@@ -23,6 +24,11 @@ class Broker(Protocol):
 
     async def read(self) -> Sequence[BrokerTask[Any]]: ...
 
+    async def ack(
+        self,
+        task: BrokerTask[Any],
+    ) -> None: ...
+
     def ack_context(
         self,
         task: BrokerTask[Any],
@@ -35,3 +41,10 @@ class Broker(Protocol):
     ) -> None: ...
 
     async def tasks_healthcheck(self, *tasks: BrokerTask[Any]) -> None: ...
+
+
+class BrokerAckContextMixin(Broker):
+    @contextlib.asynccontextmanager
+    async def ack_context(self, task: BrokerTask[Any]) -> AsyncIterator[None]:
+        yield
+        await self.ack(task=task)

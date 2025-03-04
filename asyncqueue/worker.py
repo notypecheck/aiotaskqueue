@@ -80,6 +80,12 @@ class AsyncWorker:
                     break
 
                 for message in read_task.result():
+                    if (
+                        message.task.requeue_count
+                        >= self._configuration.task.max_delivery_attempts
+                    ):
+                        await self._broker.ack(message)
+
                     await send.send(message)
                 await asyncio.sleep(0)
                 if self._stop_event.is_set():

@@ -1,8 +1,7 @@
 import asyncio
-import contextlib
 import dataclasses
 import logging
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import Sequence
 from datetime import timedelta
 from types import TracebackType
 from typing import TYPE_CHECKING, Annotated, Self
@@ -11,7 +10,7 @@ import msgspec.json
 from redis.asyncio import Redis
 from typing_extensions import Doc
 
-from asyncqueue.broker.abc import Broker
+from asyncqueue.broker.abc import Broker, BrokerAckContextMixin
 from asyncqueue.config import Configuration
 from asyncqueue.serialization import TaskRecord
 from asyncqueue.tasks import BrokerTask
@@ -46,7 +45,7 @@ class RedisBrokerConfig:
     ] = 1
 
 
-class RedisBroker(Broker):
+class RedisBroker(BrokerAckContextMixin, Broker):
     def __init__(
         self,
         *,
@@ -171,16 +170,14 @@ class RedisBroker(Broker):
             logging.debug("Claimed %s", claimed)
 
             _, messages, _ = claimed
-            for _, record in messages:
+            for record_id, record in messages:
                 task = msgspec.json.decode(record[b"value"], type=TaskRecord)
                 task.requeue_count += 1
                 await self.enqueue(task)
-
-            if messages:
                 await self._redis.xack(  # type: ignore[no-untyped-call]
                     self._broker_config.stream_name,
                     self._broker_config.group_name,
-                    *(msg[0] for msg in messages),
+                    record_id,
                 )
 
             sleep_task = asyncio.create_task(
@@ -192,9 +189,7 @@ class RedisBroker(Broker):
             if stop.is_set():
                 return
 
-    @contextlib.asynccontextmanager
-    async def ack_context(self, task: BrokerTask[RedisMeta]) -> AsyncIterator[None]:
-        yield
+    async def ack(self, task: BrokerTask[RedisMeta]) -> None:
         await self._redis.xack(  # type: ignore[no-untyped-call]
             self._broker_config.stream_name,
             self._broker_config.group_name,

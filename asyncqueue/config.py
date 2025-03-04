@@ -18,6 +18,7 @@ class TaskConfiguration:
             "that task is being processed, if that's applicable."
         ),
     ] = timedelta(seconds=5)
+    max_delivery_attempts: int = 3
     timeout_interval: Annotated[
         timedelta, Doc("Interval in which task is considered stuck/failed.")
     ] = timedelta(seconds=10)
