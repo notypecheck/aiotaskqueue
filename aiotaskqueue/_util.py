@@ -21,3 +21,6 @@ def extract_tasks(
     if isinstance(tasks, TaskRouter):
         return tuple(tasks.tasks.values())
     return tasks
+
+
+INJECTED: Any = object()

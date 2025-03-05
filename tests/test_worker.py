@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from aiotaskqueue import Configuration, Publisher, TaskParams, TaskRouter, task
 from aiotaskqueue.broker.abc import Broker
-from aiotaskqueue.worker import AsyncWorker
+from aiotaskqueue.worker import AsyncWorker, ExecutionContext
 
 from tests.utils import run_worker_until
 
@@ -43,7 +43,7 @@ async def test_execute_func(
     assert counter == increment_count
 
 
-@pytest.mark.parametrize("dependency_cls", [Publisher])
+@pytest.mark.parametrize("dependency_cls", [ExecutionContext])
 async def test_inject_dependencies(
     broker: Broker,
     configuration: Configuration,

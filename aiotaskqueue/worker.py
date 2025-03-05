@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import dataclasses
 import functools
 import inspect
 import signal
@@ -16,6 +17,14 @@ from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.router import TaskRouter
 from aiotaskqueue.serialization import TaskRecord, deserialize_task
 from aiotaskqueue.tasks import BrokerTask
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class ExecutionContext:
+    configuration: Configuration
+    publisher: Publisher
+    result_backend: ResultBackend | None
+    tasks: TaskRouter
 
 
 @functools.lru_cache
@@ -48,6 +57,13 @@ class AsyncWorker:
         self._configuration = configuration
         self._concurrency = concurrency
         self._stop_event = asyncio.Event()
+
+        self._execution_context = ExecutionContext(
+            configuration=self._configuration,
+            publisher=self._publisher,
+            result_backend=self._result_backend,
+            tasks=self._tasks,
+        )
 
         self._active_tasks: dict[str, BrokerTask[Any]] = {}
 
@@ -144,10 +160,10 @@ class AsyncWorker:
         )
         for key, value in _dependencies_to_inject(
             task_definition.func,
-            types=(Publisher,),
+            types=(ExecutionContext,),
         ).items():
-            if value is Publisher:
-                obj = self._publisher
+            if value is ExecutionContext:
+                obj = self._execution_context
             else:
                 raise ValueError
             kwargs.setdefault(key, obj)
