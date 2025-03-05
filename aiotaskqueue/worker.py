@@ -13,10 +13,11 @@ from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStre
 from aiotaskqueue import Publisher
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.config import Configuration
+from aiotaskqueue.extensions import OnTaskCompletion, OnTaskException
 from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.router import TaskRouter
 from aiotaskqueue.serialization import TaskRecord, deserialize_task
-from aiotaskqueue.tasks import BrokerTask
+from aiotaskqueue.tasks import BrokerTask, TaskDefinition
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -64,6 +65,13 @@ class AsyncWorker:
             result_backend=self._result_backend,
             tasks=self._tasks,
         )
+
+        self._ext_on_task_exception = [
+            ext for ext in configuration.extensions if isinstance(ext, OnTaskException)
+        ]
+        self._ext_on_task_completion = [
+            ext for ext in configuration.extensions if isinstance(ext, OnTaskCompletion)
+        ]
 
         self._active_tasks: dict[str, BrokerTask[Any]] = {}
 
@@ -142,17 +150,36 @@ class AsyncWorker:
         async for broker_task in recv:
             self._active_tasks[broker_task.task.id] = broker_task
             task = broker_task.task
-
-            async with self._broker.ack_context(broker_task):
-                result = await self._call_task_fn(task=task)
-
-            self._active_tasks.pop(broker_task.task.id, None)
+            task_definition = self._tasks.tasks[task.task_name]
+            try:
+                async with self._broker.ack_context(task=broker_task):
+                    result = await self._call_task_fn(
+                        task=task, task_definition=task_definition
+                    )
+            except Exception as e:  # noqa: BLE001
+                for on_task_exception in self._ext_on_task_exception:
+                    await on_task_exception.on_task_exception(
+                        task=task,
+                        definition=task_definition,
+                        exception=e,
+                    )
+                continue
+            finally:
+                self._active_tasks.pop(broker_task.task.id, None)
 
             if self._result_backend:
                 await self._result_backend.set(task_id=task.id, value=result)
 
-    async def _call_task_fn(self, task: TaskRecord) -> object:
-        task_definition = self._tasks.tasks[task.task_name]
+            for on_task_completion in self._ext_on_task_completion:
+                await on_task_completion.on_task_completion(
+                    task=task,
+                    definition=task_definition,
+                    result=result,
+                )
+
+    async def _call_task_fn(
+        self, task: TaskRecord, task_definition: TaskDefinition[Any, Any]
+    ) -> object:
         args, kwargs = deserialize_task(
             task_definition=task_definition,
             task=task,

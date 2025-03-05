@@ -2,6 +2,7 @@ import typing
 from datetime import datetime
 from typing import Any, Protocol
 
+from aiotaskqueue.serialization import TaskRecord
 from aiotaskqueue.tasks import TaskDefinition
 
 
@@ -15,4 +16,24 @@ class OnScheduleExtension(Protocol):
     ) -> None: ...
 
 
-AnyExtension = OnScheduleExtension
+@typing.runtime_checkable
+class OnTaskException(Protocol):
+    async def on_task_exception(
+        self,
+        task: TaskRecord,
+        definition: TaskDefinition[Any, Any],
+        exception: Exception,
+    ) -> None: ...
+
+
+@typing.runtime_checkable
+class OnTaskCompletion(Protocol):
+    async def on_task_completion(
+        self,
+        task: TaskRecord,
+        definition: TaskDefinition[Any, Any],
+        result: Any,  # noqa: ANN401
+    ) -> None: ...
+
+
+AnyExtension = OnScheduleExtension | OnTaskException | OnTaskCompletion
