@@ -1,3 +1,10 @@
+## 0.4.0 (2025-03-05)
+
+### Feat
+
+- **worker**: add OnTaskException and OnTaskCompletion extensions
+- **scheduler**: add OnScheduleExtension
+
 ## 0.3.0 (2025-03-05)
 
 ### Feat
