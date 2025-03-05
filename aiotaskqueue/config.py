@@ -6,6 +6,7 @@ from typing import Annotated, Any, Final
 
 from typing_extensions import Doc
 
+from aiotaskqueue.extensions import AnyExtension
 from aiotaskqueue.serialization import SerializationBackend
 
 
@@ -35,16 +36,18 @@ class Configuration:
             SerializationBackend[Any], Doc("default SerializationBackend")
         ],
         serialization_backends: Annotated[
-            Sequence[SerializationBackend[Any]] | None,
+            Sequence[SerializationBackend[Any]],
             Doc("list of serialization backends in order of priority"),
-        ] = None,
+        ] = (),
+        extensions: Sequence[AnyExtension] = (),
     ) -> None:
         self.task = task or TaskConfiguration()
         self.default_serialization_backend: Final = default_serialization_backend
         self.serialization_backends: Final = {
             backend.id: backend
             for backend in itertools.chain(
-                serialization_backends or (),
+                serialization_backends,
                 (default_serialization_backend,),
             )
         }
+        self.extensions = extensions
