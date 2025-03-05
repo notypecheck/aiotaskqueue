@@ -1,3 +1,10 @@
+## 0.3.0 (2025-03-05)
+
+### Feat
+
+- add built-in "sequential" task to run tasks in sequence
+- allow injecting "Publisher" instances into tasks
+
 ## 0.2.0 (2025-03-04)
 
 ### Feat
