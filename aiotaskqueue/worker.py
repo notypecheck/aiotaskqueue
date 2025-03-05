@@ -1,18 +1,34 @@
 import asyncio
 import contextlib
+import functools
+import inspect
 import signal
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from typing import Any
 
 import anyio.abc
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
+from aiotaskqueue import Publisher
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.router import TaskRouter
-from aiotaskqueue.serialization import deserialize_task
+from aiotaskqueue.serialization import TaskRecord, deserialize_task
 from aiotaskqueue.tasks import BrokerTask
+
+
+@functools.lru_cache
+def _dependencies_to_inject(
+    function: Callable[..., Any],
+    types: Sequence[type[object]],
+) -> Mapping[str, type[object]]:
+    signature = inspect.signature(function)
+    result = {}
+    for key, parameter in signature.parameters.items():
+        if parameter.annotation in types:
+            result[key] = parameter.annotation
+    return result
 
 
 class AsyncWorker:
@@ -26,6 +42,7 @@ class AsyncWorker:
         concurrency: int,
     ) -> None:
         self._broker = broker
+        self._publisher = Publisher(broker=broker, config=configuration)
         self._result_backend = result_backend
         self._tasks = tasks
         self._configuration = configuration
@@ -39,11 +56,11 @@ class AsyncWorker:
 
         signal.signal(
             signal.SIGTERM,
-            lambda signalnum, handler, send_=send: self._stop(send=send_),  # type: ignore[misc]  # noqa: ARG005
+            lambda signalnum, handler, send_=send: self.stop(),  # type: ignore[misc]  # noqa: ARG005
         )
         signal.signal(
             signal.SIGINT,
-            lambda signalnum, handler, send_=send: self._stop(send=send_),  # type: ignore[misc]  # noqa: ARG005
+            lambda signalnum, handler, send_=send: self.stop(),  # type: ignore[misc]  # noqa: ARG005
         )
 
         tasks: list[asyncio.Task[object]] = []
@@ -98,12 +115,12 @@ class AsyncWorker:
         try:
             yield
         finally:
-            self._stop(send)
+            self.stop()
+            send.close()
             await asyncio.wait(tasks)
 
-    def _stop(self, send: MemoryObjectSendStream[Any]) -> None:
+    def stop(self) -> None:
         self._stop_event.set()
-        send.close()
 
     async def _worker(self, recv: MemoryObjectReceiveStream[BrokerTask[Any]]) -> None:
         async for broker_task in recv:
@@ -111,18 +128,31 @@ class AsyncWorker:
             task = broker_task.task
 
             async with self._broker.ack_context(broker_task):
-                task_definition = self._tasks.tasks[task.task_name]
-                args, kwargs = deserialize_task(
-                    task_definition=task_definition,
-                    task=task,
-                    serialization_backends=self._configuration.serialization_backends,
-                )
-                result = await task_definition.func(*args, **kwargs)
+                result = await self._call_task_fn(task=task)
 
             self._active_tasks.pop(broker_task.task.id, None)
 
             if self._result_backend:
                 await self._result_backend.set(task_id=task.id, value=result)
+
+    async def _call_task_fn(self, task: TaskRecord) -> object:
+        task_definition = self._tasks.tasks[task.task_name]
+        args, kwargs = deserialize_task(
+            task_definition=task_definition,
+            task=task,
+            serialization_backends=self._configuration.serialization_backends,
+        )
+        for key, value in _dependencies_to_inject(
+            task_definition.func,
+            types=(Publisher,),
+        ).items():
+            if value is Publisher:
+                obj = self._publisher
+            else:
+                raise ValueError
+            kwargs.setdefault(key, obj)
+
+        return await task_definition.func(*args, **kwargs)
 
     async def _claim_pending_tasks(self, stop: asyncio.Event) -> None:
         closes = asyncio.create_task(stop.wait())
