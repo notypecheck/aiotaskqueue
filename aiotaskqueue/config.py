@@ -26,6 +26,11 @@ class TaskConfiguration:
     ] = timedelta(seconds=10)
 
 
+@dataclasses.dataclass
+class ResultBackendConfiguration:
+    result_ttl: timedelta = timedelta(days=1)
+
+
 class Configuration:
     """Configuration is a semi-global object that defines behavior shared between different components, such as serialization, plugins and timeouts."""
 
@@ -33,6 +38,7 @@ class Configuration:
         self,
         *,
         task: Annotated[TaskConfiguration | None, Doc("task configuration")] = None,
+        result: ResultBackendConfiguration | None = None,
         default_serialization_backend: Annotated[
             SerializationBackend[Any], Doc("default SerializationBackend")
         ],
@@ -42,7 +48,8 @@ class Configuration:
         ] = (),
         extensions: Sequence[AnyExtension] = (),
     ) -> None:
-        self.task = task or TaskConfiguration()
+        self.task: Final = task or TaskConfiguration()
+        self.result: Final = result or ResultBackendConfiguration()
         self.default_serialization_backend: Final = default_serialization_backend
         self.serialization_backends: Final = {
             backend.id: backend

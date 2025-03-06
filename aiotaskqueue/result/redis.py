@@ -25,7 +25,9 @@ class RedisResultBackend(ResultBackend):
             backends=self._config.serialization_backends,
         )
         await self._redis.set(
-            name=f"{task_id}-result", value=f"{backend_id},{serialized_value.decode()}"
+            name=f"{task_id}-result",
+            value=f"{backend_id},{serialized_value.decode()}",
+            ex=self._config.result.result_ttl,
         )
 
     async def wait(
