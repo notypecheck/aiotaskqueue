@@ -57,7 +57,14 @@ class Scheduler:
             scheduled_task = self.tasks[scheduled_task_name]
 
             await self._publisher.enqueue(scheduled_task())
-            await self._do_schedule_task(scheduled_task, utc_now())
+            now = utc_now()
+            next_schedule_time = await self._do_schedule_task(scheduled_task, now)
+            for extension in self._extensions:
+                await extension.on_schedule(
+                    task=scheduled_task,
+                    scheduled_at=now,
+                    next_schedule_at=next_schedule_time,
+                )
 
     async def _initial_scheduled_tasks(self) -> None:
         now = utc_now()
@@ -68,16 +75,10 @@ class Scheduler:
         self,
         task: TaskDefinition[Any, Any],
         now: datetime,
-    ) -> None:
+    ) -> datetime:
         if task.params.schedule is None:
             raise ValueError
 
         schedule_datetime = task.params.schedule.next_schedule(now)
         await self._scheduled_tasks.put((schedule_datetime, task.params.name))
-
-        for extension in self._extensions:
-            await extension.on_schedule(
-                task=task,
-                scheduled_at=now,
-                next_schedule_at=schedule_datetime,
-            )
+        return schedule_datetime
