@@ -1,3 +1,9 @@
+## 0.5.0 (2025-03-06)
+
+### Feat
+
+- **worker**: add shutdown deadline
+
 ## 0.4.0 (2025-03-05)
 
 ### Feat
