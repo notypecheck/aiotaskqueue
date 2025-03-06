@@ -1,3 +1,9 @@
+## 0.6.0 (2025-03-06)
+
+### Feat
+
+- allow configuring result backend TTL
+
 ## 0.5.0 (2025-03-06)
 
 ### Feat
