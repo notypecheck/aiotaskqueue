@@ -141,7 +141,16 @@ class AsyncWorker:
         finally:
             self.stop()
             send.close()
-            await asyncio.wait(tasks)
+
+            try:
+                async with asyncio.timeout(
+                    self._configuration.task.shutdown_deadline.total_seconds(),
+                ):
+                    await asyncio.wait(tasks)
+            except TimeoutError:
+                for task in tasks:
+                    task.cancel()
+                await asyncio.wait(tasks)
 
     def stop(self) -> None:
         self._stop_event.set()

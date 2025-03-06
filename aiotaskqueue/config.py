@@ -20,6 +20,7 @@ class TaskConfiguration:
         ),
     ] = timedelta(seconds=5)
     max_delivery_attempts: int = 3
+    shutdown_deadline: timedelta = timedelta(minutes=1)
     timeout_interval: Annotated[
         timedelta, Doc("Interval in which task is considered stuck/failed.")
     ] = timedelta(seconds=10)
