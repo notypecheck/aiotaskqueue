@@ -25,7 +25,7 @@ class RedisResultBackend(ResultBackend):
             backends=self._config.serialization_backends,
         )
         await self._redis.set(
-            name=f"{task_id}-result",
+            name=self._cache_key(task_id),
             value=f"{backend_id},{serialized_value.decode()}",
             ex=self._config.result.result_ttl,
         )
@@ -36,7 +36,7 @@ class RedisResultBackend(ResultBackend):
         *,
         poll_interval: float = 0.1,
     ) -> TResult:
-        while not (raw_value := await self._redis.get(f"{task.id}-result")):  # noqa: ASYNC110
+        while not (raw_value := await self._redis.get(self._cache_key(task.id))):  # noqa: ASYNC110
             await asyncio.sleep(poll_interval)
 
         backend_id, value = raw_value.split(b",", maxsplit=1)
@@ -44,3 +44,6 @@ class RedisResultBackend(ResultBackend):
             SerializationBackendId(backend_id.decode())
         ].deserialize(value=value, type=task.instance.task.return_type)
         return cast(TResult, deserialized)
+
+    def _cache_key(self, task_id: str) -> str:
+        return self._config.result.result_key(task_id)

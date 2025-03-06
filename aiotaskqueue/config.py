@@ -1,6 +1,6 @@
 import dataclasses
 import itertools
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import timedelta
 from typing import Annotated, Any, Final
 
@@ -26,8 +26,13 @@ class TaskConfiguration:
     ] = timedelta(seconds=10)
 
 
+def default_result_key(task_id: str) -> str:
+    return f"aiotaskqueue:result:{task_id}"
+
+
 @dataclasses.dataclass
 class ResultBackendConfiguration:
+    result_key: Callable[[str], str] = default_result_key
     result_ttl: timedelta = timedelta(days=1)
 
 

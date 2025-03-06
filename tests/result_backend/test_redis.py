@@ -31,12 +31,14 @@ async def _task() -> MsgspecModel:
 
 
 async def test_set(
-    redis: RedisClient, result_backend: ResultBackend, model: MsgspecModel
+    redis: RedisClient,
+    result_backend: ResultBackend,
+    model: MsgspecModel,
 ) -> None:
     task_id = str(uuid.uuid4())
     await result_backend.set(task_id=task_id, value=model)
 
-    stored = await redis.get(f"{task_id}-result")
+    stored = await redis.get(f"aiotaskqueue:result:{task_id}")
     assert stored == f"msgspec,{msgspec.json.encode(model).decode()}".encode()
 
 
