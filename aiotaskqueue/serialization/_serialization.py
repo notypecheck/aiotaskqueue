@@ -55,6 +55,7 @@ def serialize_task(
         SerializationBackendId,
         SerializationBackend[Any],
     ],
+    id: str | None = None,  # noqa: A002
 ) -> TaskRecord:
     args = tuple(
         serialize(
@@ -73,7 +74,7 @@ def serialize_task(
         for key, value in task.kwargs.items()
     }
     return TaskRecord(
-        id=str(uuid.uuid4()),
+        id=id or str(uuid.uuid4()),
         task_name=task.task.params.name,
         enqueue_time=utc_now(),
         args=args,

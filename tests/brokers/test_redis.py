@@ -68,6 +68,7 @@ async def test_enqueue(redis_broker: RedisBroker, now: datetime) -> None:
                     task=task_instance,
                     default_backend=serializer,
                     serialization_backends={serializer.id: serializer},
+                    id=str(uuid.uuid4()),
                 )
                 await redis_broker.enqueue(task=task_record)
 

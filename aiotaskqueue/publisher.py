@@ -14,11 +14,17 @@ class Publisher:
         self._broker = broker
         self._config = config
 
-    async def enqueue(self, task: TaskInstance[P, TResult]) -> RunningTask[TResult]:
+    async def enqueue(
+        self,
+        task: TaskInstance[P, TResult],
+        *,
+        id: str | None = None,  # noqa: A002
+    ) -> RunningTask[TResult]:
         record = serialize_task(
             task,
             default_backend=self._config.default_serialization_backend,
             serialization_backends=self._config.serialization_backends,
+            id=id,
         )
         await self._broker.enqueue(record)
         return RunningTask(instance=task, id=record.id)
