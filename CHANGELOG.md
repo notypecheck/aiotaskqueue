@@ -1,3 +1,17 @@
+## 0.7.0 (2025-03-09)
+
+### Feat
+
+- wrap ResultBackend.get return value into Some[] container type to differentiate between missing and None values
+- add ResultBackend.get method
+- allow enqueueing tasks with specific id
+- **result-backend**: allow configuring result key in Configuration
+
+### Fix
+
+- skip tasks in "sequential" if there's a result present already
+- **scheduler**: don't call OnScheduleExtension when initializing tasks on scheduler startup
+
 ## 0.6.0 (2025-03-06)
 
 ### Feat

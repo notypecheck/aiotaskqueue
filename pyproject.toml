@@ -1,6 +1,6 @@
 [project]
 name = "aiotaskqueue"
-version = "0.6.0"
+version = "0.7.0"
 description = "Asynchronous task queue framework"
 authors = [
     { name = "Doctor", email = "thirvondukr@gmail.com" },
@@ -162,7 +162,7 @@ DEP004 = [
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.6.0"
+version = "0.7.0"
 tag_format = "$version"
 update_changelog_on_bump = true
 version_files = [
