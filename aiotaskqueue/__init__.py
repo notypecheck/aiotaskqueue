@@ -4,7 +4,7 @@ from .publisher import Publisher
 from .router import TaskRouter, task
 from .tasks import TaskParams
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
 __all__ = [
     "INJECTED",
