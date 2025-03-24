@@ -46,6 +46,7 @@ class TaskRecord(msgspec.Struct, kw_only=True):
     enqueue_time: datetime
     args: tuple[tuple[SerializationBackendId, bytes], ...]
     kwargs: dict[str, tuple[SerializationBackendId, bytes]]
+    meta: dict[str, Any] = msgspec.field(default_factory=dict)
 
 
 def serialize_task(

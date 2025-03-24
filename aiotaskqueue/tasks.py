@@ -14,9 +14,14 @@ if TYPE_CHECKING:
     from aiotaskqueue.serialization import TaskRecord
 
 
+class Marker:
+    pass
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class TaskParams:
     name: str
+    markers: Sequence[Marker] = ()
     schedule: Schedule | None = None
 
 

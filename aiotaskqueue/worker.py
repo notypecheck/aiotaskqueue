@@ -10,10 +10,10 @@ from typing import Any
 import anyio.abc
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
-from aiotaskqueue import Publisher
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.extensions import OnTaskCompletion, OnTaskException
+from aiotaskqueue.publisher import Publisher
 from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.router import TaskRouter
 from aiotaskqueue.serialization import TaskRecord, deserialize_task
@@ -23,6 +23,7 @@ from aiotaskqueue.tasks import BrokerTask, TaskDefinition
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
 class ExecutionContext:
     configuration: Configuration
+    broker: Broker
     publisher: Publisher
     result_backend: ResultBackend | None
     tasks: TaskRouter
@@ -61,6 +62,7 @@ class AsyncWorker:
 
         self._execution_context = ExecutionContext(
             configuration=self._configuration,
+            broker=self._broker,
             publisher=self._publisher,
             result_backend=self._result_backend,
             tasks=self._tasks,
@@ -170,6 +172,7 @@ class AsyncWorker:
                     await on_task_exception.on_task_exception(
                         task=task,
                         definition=task_definition,
+                        context=self._execution_context,
                         exception=e,
                     )
                 continue
@@ -183,11 +186,14 @@ class AsyncWorker:
                 await on_task_completion.on_task_completion(
                     task=task,
                     definition=task_definition,
+                    context=self._execution_context,
                     result=result,
                 )
 
     async def _call_task_fn(
-        self, task: TaskRecord, task_definition: TaskDefinition[Any, Any]
+        self,
+        task: TaskRecord,
+        task_definition: TaskDefinition[Any, Any],
     ) -> object:
         args, kwargs = deserialize_task(
             task_definition=task_definition,

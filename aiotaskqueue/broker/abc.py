@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 from collections.abc import AsyncIterator, Sequence
 from contextlib import AbstractAsyncContextManager
 from types import TracebackType
-from typing import Any, Protocol, Self
+from typing import TYPE_CHECKING, Any, Protocol, Self
 
-from aiotaskqueue.config import Configuration
-from aiotaskqueue.serialization import TaskRecord
-from aiotaskqueue.tasks import BrokerTask
+if TYPE_CHECKING:
+    from aiotaskqueue.config import Configuration
+    from aiotaskqueue.serialization import TaskRecord
+    from aiotaskqueue.tasks import BrokerTask
 
 
 class Broker(Protocol):

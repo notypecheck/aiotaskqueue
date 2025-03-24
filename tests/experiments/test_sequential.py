@@ -13,12 +13,14 @@ from tests.utils import run_worker_until
 
 @pytest.fixture
 def execution_context(
+    broker: Broker,
     configuration: Configuration,
     publisher: Publisher,
     redis_result_backend: ResultBackend,
 ) -> ExecutionContext:
     return ExecutionContext(
         configuration=configuration,
+        broker=broker,
         publisher=publisher,
         result_backend=redis_result_backend,
         tasks=TaskRouter([sequential_task]),

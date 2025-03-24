@@ -6,7 +6,7 @@ from aiotaskqueue.publisher import Publisher
 from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def configuration() -> Configuration:
     return Configuration(
         default_serialization_backend=MsgSpecSerializer(),
