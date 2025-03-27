@@ -1,3 +1,9 @@
+## Unreleased
+
+### Feat
+
+- allow passing parameters directly into `@task` decorator
+
 ## 0.8.0 (2025-03-24)
 
 ### Feat
