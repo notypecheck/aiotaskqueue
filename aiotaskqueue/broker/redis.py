@@ -1,7 +1,7 @@
 import asyncio
 import dataclasses
 import logging
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import timedelta
 from types import TracebackType
 from typing import TYPE_CHECKING, Annotated, Self
@@ -43,6 +43,27 @@ class RedisBrokerConfig:
         int,
         Doc("Amount of entries to read from stream at once"),
     ] = 1
+    xtrim_interval: Annotated[timedelta, Doc("Interval between XTRIM calls")] = (
+        timedelta(minutes=30)
+    )
+
+
+async def _run_until_stopped(
+    func: Callable[[], Awaitable[None]],
+    interval: timedelta,
+    stop: asyncio.Event,
+) -> None:
+    stop_task = asyncio.create_task(stop.wait())
+    while True:
+        await func()
+        sleep_task = asyncio.create_task(asyncio.sleep(interval.total_seconds()))
+        await asyncio.wait({stop_task, sleep_task}, return_when=asyncio.FIRST_COMPLETED)
+        if stop.is_set():
+            return
+
+
+def _message_id_key(a: str) -> tuple[int, int]:
+    return tuple(int(i) for i in a.split("-", maxsplit=1))  # type: ignore[return-value]
 
 
 class RedisBroker(BrokerAckContextMixin, Broker):
@@ -146,48 +167,73 @@ class RedisBroker(BrokerAckContextMixin, Broker):
     ) -> None:
         async with asyncio.TaskGroup() as tg:
             tg.create_task(
-                self._maintenance_claim_pending_records(
+                _run_until_stopped(
+                    lambda: self._maintenance_claim_pending_records(
+                        min_idle_time=config.task.timeout_interval
+                    ),
                     stop=stop,
-                    timeout_interval=config.task.timeout_interval,
+                    interval=config.task.timeout_interval,
+                ),
+            )
+            tg.create_task(
+                _run_until_stopped(
+                    self._trim_stream, stop=stop, interval=timedelta(seconds=1)
                 ),
             )
 
     async def _maintenance_claim_pending_records(
         self,
-        stop: asyncio.Event,
-        timeout_interval: timedelta,
+        min_idle_time: timedelta,
     ) -> None:
         """Requeues messages that weren't ACKed in time."""
-        stop_task = asyncio.create_task(stop.wait())
-        while True:
-            claimed = await self._redis.xautoclaim(
+        claimed = await self._redis.xautoclaim(
+            self._broker_config.stream_name,
+            self._broker_config.group_name,
+            self._consumer_name,
+            count=1000,
+            min_idle_time=int(min_idle_time.total_seconds() * 1000),
+        )
+        logging.debug("Claimed %s", claimed)
+
+        _, messages, _ = claimed
+        for record_id, record in messages:
+            task = msgspec.json.decode(record[b"value"], type=TaskRecord)
+            task.requeue_count += 1
+            await self.enqueue(task)
+            await self._redis.xack(  # type: ignore[no-untyped-call]
                 self._broker_config.stream_name,
                 self._broker_config.group_name,
-                self._consumer_name,
-                count=1000,
-                min_idle_time=int(timeout_interval.total_seconds() * 1000),
+                record_id,
             )
-            logging.debug("Claimed %s", claimed)
 
-            _, messages, _ = claimed
-            for record_id, record in messages:
-                task = msgspec.json.decode(record[b"value"], type=TaskRecord)
-                task.requeue_count += 1
-                await self.enqueue(task)
-                await self._redis.xack(  # type: ignore[no-untyped-call]
-                    self._broker_config.stream_name,
-                    self._broker_config.group_name,
-                    record_id,
-                )
+    async def _trim_stream(self) -> None:
+        """Trims stream up to the last delivered/pending message."""
+        consumer_groups = await self._redis.xinfo_groups(  # type: ignore[no-untyped-call]
+            self._broker_config.stream_name
+        )
+        min_message_ids = []
+        for consumer_group in consumer_groups:
+            pending = await self._redis.xpending_range(
+                self._broker_config.stream_name,
+                groupname=consumer_group["name"],
+                min="-",
+                max="+",
+                count=1,
+            )
+            if not pending:
+                continue
+            min_message_ids.append(pending[0]["message_id"].decode())
 
-            sleep_task = asyncio.create_task(
-                asyncio.sleep(timeout_interval.total_seconds())
+        if min_message_ids:
+            # If messages are in PEL they've already been read, and we don't have to use last delivered id
+            target = min(min_message_ids, key=_message_id_key)
+        else:
+            target = min(
+                [group["last-delivered-id"].decode() for group in consumer_groups],
+                key=_message_id_key,
             )
-            await asyncio.wait(
-                {stop_task, sleep_task}, return_when=asyncio.FIRST_COMPLETED
-            )
-            if stop.is_set():
-                return
+
+        await self._redis.xtrim(self._broker_config.stream_name, minid=target)
 
     async def ack(self, task: BrokerTask[RedisMeta]) -> None:
         await self._redis.xack(  # type: ignore[no-untyped-call]
