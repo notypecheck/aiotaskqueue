@@ -1,11 +1,10 @@
 import asyncio
 
-from redis.asyncio import Redis
-
-from aiotaskqueue import TaskRouter, Configuration
+from aiotaskqueue import Configuration, TaskRouter
 from aiotaskqueue.broker.redis import RedisBroker
 from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
 from aiotaskqueue.worker import AsyncWorker
+from redis.asyncio import Redis
 
 router = TaskRouter()
 
