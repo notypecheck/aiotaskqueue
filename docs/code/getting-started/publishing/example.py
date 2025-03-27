@@ -18,7 +18,7 @@ async def main() -> None:
     await publisher.enqueue(
         notify_user(
             user_id=42,
-            message="Your notification!"
+            message="Your notification!",
         )
     )
 
