@@ -1,14 +1,13 @@
 import pytest
 from aiotaskqueue.router import TaskRouter, task
-from aiotaskqueue.tasks import TaskParams
 
 
-@task(TaskParams(name="name"))
+@task(name="name")
 async def task_1() -> None:
     pass
 
 
-@task(TaskParams(name="name"))
+@task(name="name")
 async def task_2() -> None:
     pass
 
@@ -19,21 +18,21 @@ def router() -> TaskRouter:
 
 
 async def test_task_decorator(router: TaskRouter) -> None:
-    params = TaskParams(name="some-task")
+    name = "task-name"
 
     async def func() -> None:
         pass
 
-    router.task(params)(func)
+    router.task(name)(func)
 
-    assert router.tasks[params.name].func is func
-    assert router.tasks[params.name].params is params
+    assert router.tasks[name].func is func
+    assert router.tasks[name].name == name
 
 
 async def test_include(router: TaskRouter) -> None:
     router_to_include = TaskRouter()
 
-    @router_to_include.task(TaskParams(name="name"))
+    @router_to_include.task(name="name")
     async def new_task() -> None:
         pass
 

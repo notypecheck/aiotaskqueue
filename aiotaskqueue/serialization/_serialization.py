@@ -20,9 +20,9 @@ SerializationBackendId = NewType("SerializationBackendId", str)
 class SerializationBackend(Protocol[TResult]):
     id: ClassVar[SerializationBackendId]
 
-    def serialize(self, value: TResult) -> bytes: ...
+    def serialize(self, value: TResult) -> str: ...
 
-    def deserialize(self, value: bytes, type: type[TResult]) -> TResult: ...
+    def deserialize(self, value: str, type: type[TResult]) -> TResult: ...
 
     def serializable(self, value: TResult) -> bool: ...
 
@@ -31,7 +31,7 @@ def serialize(
     value: object,
     default_backend: SerializationBackend[object],
     backends: Mapping[SerializationBackendId, SerializationBackend[object]],
-) -> tuple[SerializationBackendId, bytes]:
+) -> tuple[SerializationBackendId, str]:
     for backend in backends.values():
         if backend.serializable(value):
             return backend.id, backend.serialize(value)
@@ -44,8 +44,8 @@ class TaskRecord(msgspec.Struct, kw_only=True):
     task_name: str
     requeue_count: int = 0
     enqueue_time: datetime
-    args: tuple[tuple[SerializationBackendId, bytes], ...]
-    kwargs: dict[str, tuple[SerializationBackendId, bytes]]
+    args: tuple[tuple[SerializationBackendId, str], ...]
+    kwargs: dict[str, tuple[SerializationBackendId, str]]
     meta: dict[str, Any] = msgspec.field(default_factory=dict)
 
 
@@ -76,7 +76,7 @@ def serialize_task(
     }
     return TaskRecord(
         id=id or str(uuid.uuid4()),
-        task_name=task.task.params.name,
+        task_name=task.task.name,
         enqueue_time=utc_now(),
         args=args,
         kwargs=kwargs,

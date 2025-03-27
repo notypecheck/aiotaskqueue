@@ -30,7 +30,7 @@ class RedisResultBackend(ResultBackend):
         )
         await self._redis.set(
             name=self._cache_key(task_id),
-            value=f"{backend_id},{serialized_value.decode()}",
+            value=f"{backend_id},{serialized_value}",
             ex=self._config.result.result_ttl,
         )
 
@@ -74,7 +74,7 @@ class RedisResultBackend(ResultBackend):
         backend_id, value = raw_value.split(b",", maxsplit=1)
         return self._config.serialization_backends[
             SerializationBackendId(backend_id.decode())
-        ].deserialize(value=value, type=return_type)
+        ].deserialize(value=value.decode(), type=return_type)
 
     def _cache_key(self, task_id: str) -> str:
         return self._config.result.result_key(task_id)

@@ -1,4 +1,4 @@
-from aiotaskqueue import TaskParams, TaskRouter
+from aiotaskqueue import TaskRouter
 from aiotaskqueue._util import utc_now
 from aiotaskqueue.scheduler import crontab
 from msgspec import Struct
@@ -19,19 +19,15 @@ class Email(BaseModel):
 
 
 @router.task(
-    TaskParams(
-        name="email-send",
-    )
+    name="email-send",
 )
 async def send_email(person: Person, email: Email) -> str:
     return email.text + person.name
 
 
 @router.task(
-    TaskParams(
-        name="periodic-task",
-        schedule=crontab("* * * * *"),
-    )
+    name="periodic-task",
+    schedule=crontab("* * * * *"),
 )
 async def periodic_task() -> str:
     print("Periodic task", utc_now())  # noqa: T201

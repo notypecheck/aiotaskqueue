@@ -6,7 +6,7 @@ from aiotaskqueue._util import INJECTED
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.router import task
 from aiotaskqueue.serialization import TaskRecord, deserialize_task, serialize_task
-from aiotaskqueue.tasks import TaskInstance, TaskParams
+from aiotaskqueue.tasks import TaskInstance
 from aiotaskqueue.worker import ExecutionContext
 
 
@@ -30,7 +30,7 @@ def sequential(
     return sequential_task(seq=Sequential(tasks=records))
 
 
-@task(TaskParams(name="aiotaskqueue-sequential"))
+@task(name="aiotaskqueue-sequential")
 async def sequential_task(
     seq: Sequential,
     context: ExecutionContext = INJECTED,

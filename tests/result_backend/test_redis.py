@@ -4,7 +4,7 @@ from datetime import datetime
 
 import msgspec
 import pytest
-from aiotaskqueue import Configuration, TaskParams, task
+from aiotaskqueue import Configuration, task
 from aiotaskqueue.broker.redis import RedisClient
 from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.result.redis import RedisResultBackend
@@ -25,7 +25,7 @@ def model(now: datetime) -> MsgspecModel:
     return MsgspecModel(a=42, b="str", now=now)
 
 
-@task(params=TaskParams(name="some-task"))
+@task(name="some-task")
 async def _task() -> MsgspecModel:
     raise NotImplementedError
 

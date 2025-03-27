@@ -18,16 +18,11 @@ class Marker:
     pass
 
 
-@dataclasses.dataclass(slots=True, kw_only=True)
-class TaskParams:
+@dataclasses.dataclass(kw_only=True)
+class TaskDefinition(Generic[P, TResult]):
     name: str
     markers: Sequence[Marker] = ()
     schedule: Schedule | None = None
-
-
-@dataclasses.dataclass(kw_only=True)
-class TaskDefinition(Generic[P, TResult]):
-    params: TaskParams
     func: Callable[P, Awaitable[TResult]]
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> TaskInstance[P, TResult]:

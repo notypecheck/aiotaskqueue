@@ -2,7 +2,7 @@ import asyncio
 import random
 
 import pytest
-from aiotaskqueue import Configuration, Publisher, TaskParams, TaskRouter, task
+from aiotaskqueue import Configuration, Publisher, TaskRouter, task
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.experimental.sequential import Sequential, sequential, sequential_task
 from aiotaskqueue.result.abc import ResultBackend
@@ -38,7 +38,7 @@ async def test_sequential(
     results = []
     finished = asyncio.Event()
 
-    @task(TaskParams(name="test-task"))
+    @task(name="test-task")
     async def test_task(n: int) -> None:
         results.append(n)
         if len(results) == count:
@@ -81,7 +81,7 @@ async def test_should_skip_executed_tasks(
 
     results = []
 
-    @execution_context.tasks.task(TaskParams(name="test-task"))
+    @execution_context.tasks.task(name="test-task")
     async def test_task(n: int) -> None:
         results.append(n)
         if len(results) == total_tasks - random_tasks_to_mark_as_completed:

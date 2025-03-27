@@ -12,8 +12,8 @@ class MsgSpecSerializer(SerializationBackend[Struct]):
     def serializable(self, value: Struct) -> bool:
         return isinstance(value, msgspec.Struct)
 
-    def serialize(self, value: Struct) -> bytes:
-        return msgspec.json.encode(value)
+    def serialize(self, value: Struct) -> str:
+        return msgspec.json.encode(value).decode()
 
-    def deserialize(self, value: bytes, type: type[TResult]) -> TResult:
+    def deserialize(self, value: str, type: type[TResult]) -> TResult:
         return msgspec.json.decode(value, type=type)

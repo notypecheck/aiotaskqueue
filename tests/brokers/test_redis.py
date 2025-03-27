@@ -84,4 +84,4 @@ async def test_enqueue(redis_broker: RedisBroker, now: datetime) -> None:
         assert kwargs == task_instance.kwargs
 
         assert broker_task.task.enqueue_time == now
-        assert broker_task.task.task_name == task_instance.task.params.name
+        assert broker_task.task.task_name == task_instance.task.name

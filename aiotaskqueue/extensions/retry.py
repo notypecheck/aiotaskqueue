@@ -23,7 +23,7 @@ class RetryExtension(OnTaskException):
         exception: Exception,  # noqa: ARG002
     ) -> None:
         retry = next(
-            marker for marker in definition.params.markers if isinstance(marker, Retry)
+            marker for marker in definition.markers if isinstance(marker, Retry)
         )
 
         if (retry_count := task.meta.get(self._KEY, 0)) >= retry.max_retries:

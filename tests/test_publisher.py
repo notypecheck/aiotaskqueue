@@ -15,7 +15,7 @@ async def test_enqueue(broker: InMemoryBroker, publisher: Publisher) -> None:
 
     assert len(messages) == 1
     message = messages[0]
-    assert message.task.task_name == noop_task.params.name
+    assert message.task.task_name == noop_task.name
 
 
 async def test_enqueue_with_params(
@@ -30,7 +30,7 @@ async def test_enqueue_with_params(
             await publisher.enqueue(task_to_publish)
 
     for task_, message in zip(tasks, messages, strict=True):
-        assert message.task.task_name == task_with_params.params.name
+        assert message.task.task_name == task_with_params.name
         args, kwargs = deserialize_task(
             task_definition=task_.task,
             task=message.task,

@@ -3,7 +3,7 @@ import random
 from typing import Any
 
 import pytest
-from aiotaskqueue import Configuration, Publisher, TaskParams, TaskRouter, task
+from aiotaskqueue import Configuration, Publisher, TaskRouter, task
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.worker import AsyncWorker, ExecutionContext
 
@@ -20,7 +20,7 @@ async def test_execute_func(
     counter = 0
     target_reached = asyncio.Event()
 
-    @task(TaskParams(name="test-task"))
+    @task(name="test-task")
     async def test_task() -> None:
         nonlocal counter
         counter += 1
@@ -52,7 +52,7 @@ async def test_inject_dependencies(
 ) -> None:
     finished = asyncio.Event()
 
-    @task(TaskParams(name="test-task"))
+    @task(name="test-task")
     async def test_task(dep: dependency_cls = Any) -> None:  # type: ignore[valid-type]
         assert isinstance(dep, dependency_cls)
         finished.set()

@@ -1,3 +1,3 @@
-from .abc import AnyExtension, OnScheduleExtension, OnTaskCompletion, OnTaskException
+from .abc import AnyExtension, OnTaskCompletion, OnTaskException, OnTaskSchedule
 
-__all__ = ["AnyExtension", "OnScheduleExtension", "OnTaskCompletion", "OnTaskException"]
+__all__ = ["AnyExtension", "OnTaskCompletion", "OnTaskException", "OnTaskSchedule"]

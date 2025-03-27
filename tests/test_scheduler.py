@@ -8,14 +8,13 @@ from aiotaskqueue.broker.inmemory import InMemoryBroker
 from aiotaskqueue.publisher import Publisher
 from aiotaskqueue.router import task
 from aiotaskqueue.scheduler import Scheduler, crontab, every
-from aiotaskqueue.tasks import TaskParams
 
 from tests.utils import capture_broker_messages
 
 BASE_DATETIME = datetime(2000, 1, 1, tzinfo=UTC)
 
 
-@task(TaskParams(name="every-task", schedule=every(timedelta(minutes=5))))
+@task(name="every-task", schedule=every(timedelta(minutes=5)))
 async def every_task() -> None:
     pass
 

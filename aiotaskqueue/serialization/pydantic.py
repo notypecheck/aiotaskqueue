@@ -11,8 +11,8 @@ class PydanticSerializer(SerializationBackend[BaseModel]):
     def serializable(self, value: BaseModel) -> bool:
         return isinstance(value, BaseModel)
 
-    def serialize(self, value: BaseModel) -> bytes:
-        return value.model_dump_json().encode()
+    def serialize(self, value: BaseModel) -> str:
+        return value.model_dump_json()
 
-    def deserialize(self, value: bytes, type: type[BaseModel]) -> BaseModel:
+    def deserialize(self, value: str, type: type[BaseModel]) -> BaseModel:
         return type.model_validate_json(value)

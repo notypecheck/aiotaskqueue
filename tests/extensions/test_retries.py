@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 
 import pytest
-from aiotaskqueue import Configuration, Publisher, TaskParams, TaskRouter
+from aiotaskqueue import Configuration, Publisher, TaskRouter
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.extensions.retry import Retry, RetryExtension
 from aiotaskqueue.worker import AsyncWorker
@@ -39,10 +39,8 @@ async def test_should_retry(
     execution_count = 0
 
     @router.task(
-        params=TaskParams(
-            name="retry-task",
-            markers=[Retry(max_retries=max_retries)],
-        )
+        name="retry-task",
+        markers=[Retry(max_retries=max_retries)],
     )
     async def retry_task() -> None:
         nonlocal execution_count

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from aiotaskqueue import Configuration
 from aiotaskqueue._util import extract_tasks, utc_now
-from aiotaskqueue.extensions import OnScheduleExtension
+from aiotaskqueue.extensions import OnTaskSchedule
 
 if TYPE_CHECKING:
     from aiotaskqueue.publisher import Publisher
@@ -26,9 +26,7 @@ class Scheduler:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self.tasks: Mapping[str, TaskDefinition[Any, Any]] = {
-            task.params.name: task
-            for task in extract_tasks(tasks)
-            if task.params.schedule
+            task.name: task for task in extract_tasks(tasks) if task.schedule
         }
         self._publisher = publisher
         self._scheduled_tasks: PriorityQueue[tuple[datetime, str]] = PriorityQueue(
@@ -37,11 +35,7 @@ class Scheduler:
         self._sleep = sleep
 
         self._extensions = (
-            [
-                ext
-                for ext in configuration.extensions
-                if isinstance(ext, OnScheduleExtension)
-            ]
+            [ext for ext in configuration.extensions if isinstance(ext, OnTaskSchedule)]
             if configuration
             else ()
         )
@@ -76,9 +70,9 @@ class Scheduler:
         task: TaskDefinition[Any, Any],
         now: datetime,
     ) -> datetime:
-        if task.params.schedule is None:
+        if task.schedule is None:
             raise ValueError
 
-        schedule_datetime = task.params.schedule.next_schedule(now)
-        await self._scheduled_tasks.put((schedule_datetime, task.params.name))
+        schedule_datetime = task.schedule.next_schedule(now)
+        await self._scheduled_tasks.put((schedule_datetime, task.name))
         return schedule_datetime
