@@ -9,5 +9,5 @@ To create a worker you need:
 want to store execution results of your tasks.
 
 ```python
---8<-- "docs/code/getting-started/worker.py"
+--8<-- "docs/code/getting_started/worker.py"
 ```
