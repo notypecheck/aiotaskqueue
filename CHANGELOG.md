@@ -1,7 +1,8 @@
-## Unreleased
+## 0.9.0 (2025-03-27)
 
 ### Feat
 
+- **redis**: automatically trim stream
 - allow passing parameters directly into `@task` decorator
 
 ## 0.8.0 (2025-03-24)
