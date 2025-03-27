@@ -1,0 +1,104 @@
+site_name: Async Task Queue
+site_description: ""
+strict: true
+
+repo_url: https://github.com/ThirVondukr/aiotaskqueue
+
+watch:
+  - ./docs
+  - ./aiotaskqueue
+
+
+nav:
+  - About: index.md
+  - Getting Started:
+      - Declaring Tasks: getting-started/declaring-tasks.md
+      - Publishing Tasks: getting-started/publishing-tasks.md
+      - Worker: getting-started/worker.md
+  - Components:
+      - Overview: components/index.md
+      - Broker:
+          - Broker: components/broker/index.md
+          - Redis: components/broker/redis.md
+      - Publisher: components/publisher.md
+      - Result Backend: components/result-backend.md
+  - Configuration:
+      - Configuration: configuration/index.md
+  - Extensions:
+      - Extensions: extensions/index.md
+      - Built-in Extensions:
+          - Retry: extensions/builtin/retry.md
+  - Internals:
+      - Message Format: internals/message-format.md
+  - Changelog: changelog.md
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+  not_found: warn
+
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            filters:
+              - '!^_'
+            extensions:
+              - griffe_typingdoc
+            line_length: 55
+            annotations_path: brief
+            docstring_section_style: list
+            docstring_style: sphinx
+            inherited_members: true
+            members_order: source
+            merge_init_into_class: true
+            separate_signature: true
+            show_root_full_path: false
+            show_root_heading: true
+            show_source: false
+            show_signature: true
+            show_bases: false
+            show_signature_annotations: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            unwrap_annotated: true
+
+theme:
+  name: material
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - navigation.tabs
+    - navigation.expand
+
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: green
+      toggle:
+        icon: material/brightness-4
+
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: green
+      toggle:
+        icon: material/brightness-7
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.details
+  - pymdownx.superfences
+  - admonition
