@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import typing
+from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 if TYPE_CHECKING:
     from aiotaskqueue.serialization import TaskRecord
     from aiotaskqueue.tasks import TaskDefinition
     from aiotaskqueue.worker import ExecutionContext
+
+
+T = TypeVar("T")
 
 
 @typing.runtime_checkable
@@ -36,6 +40,20 @@ class OnTaskException(Protocol):
 
 
 @typing.runtime_checkable
+class OnTaskExecution(Protocol):
+    async def on_task_execution(
+        self,
+        args: Any,  # noqa: ANN401
+        kwargs: Any,  # noqa: ANN401
+        definition: TaskDefinition[Any, T],
+        context: ExecutionContext,
+        call_next: Callable[
+            [tuple[Any], dict[str, Any], ExecutionContext], Awaitable[T]
+        ],
+    ) -> T: ...
+
+
+@typing.runtime_checkable
 class OnTaskCompletion(Protocol):
     """Called when task is successfully completed and the result is already stored in the ResultBackend."""
 
@@ -48,4 +66,4 @@ class OnTaskCompletion(Protocol):
     ) -> None: ...
 
 
-AnyExtension = OnTaskSchedule | OnTaskException | OnTaskCompletion
+AnyExtension = OnTaskSchedule | OnTaskExecution | OnTaskException | OnTaskCompletion

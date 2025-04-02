@@ -13,6 +13,8 @@ from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStre
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.extensions import OnTaskCompletion, OnTaskException
+from aiotaskqueue.extensions.abc import OnTaskExecution
+from aiotaskqueue.extensions.middleware import MiddlewareStack
 from aiotaskqueue.publisher import Publisher
 from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.router import TaskRouter
@@ -73,6 +75,9 @@ class AsyncWorker:
         ]
         self._ext_on_task_completion = [
             ext for ext in configuration.extensions if isinstance(ext, OnTaskCompletion)
+        ]
+        self._ext_on_task_execution = [
+            ext for ext in configuration.extensions if isinstance(ext, OnTaskExecution)
         ]
 
         self._active_tasks: dict[str, BrokerTask[Any]] = {}
@@ -210,7 +215,15 @@ class AsyncWorker:
                 raise ValueError
             kwargs.setdefault(key, obj)
 
-        return await task_definition.func(*args, **kwargs)
+        middleware_stack = MiddlewareStack(
+            middlewares=self._ext_on_task_execution,
+            task_definition=task_definition,
+        )
+        return await middleware_stack.call(
+            args,
+            kwargs,
+            context=self._execution_context,
+        )
 
     async def _claim_pending_tasks(self, stop: asyncio.Event) -> None:
         closes = asyncio.create_task(stop.wait())
