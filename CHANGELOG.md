@@ -1,3 +1,9 @@
+## 0.10.0 (2025-04-09)
+
+### Feat
+
+- add OnTaskExecution extension (aka middleware)
+
 ## 0.9.0 (2025-03-27)
 
 ### Feat
