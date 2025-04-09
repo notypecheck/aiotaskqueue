@@ -10,7 +10,6 @@ if TYPE_CHECKING:
     from aiotaskqueue.tasks import TaskDefinition
     from aiotaskqueue.worker import ExecutionContext
 
-
 T = TypeVar("T")
 
 
@@ -40,20 +39,6 @@ class OnTaskException(Protocol):
 
 
 @typing.runtime_checkable
-class OnTaskExecution(Protocol):
-    async def on_task_execution(
-        self,
-        args: Any,  # noqa: ANN401
-        kwargs: Any,  # noqa: ANN401
-        definition: TaskDefinition[Any, T],
-        context: ExecutionContext,
-        call_next: Callable[
-            [tuple[Any], dict[str, Any], ExecutionContext], Awaitable[T]
-        ],
-    ) -> T: ...
-
-
-@typing.runtime_checkable
 class OnTaskCompletion(Protocol):
     """Called when task is successfully completed and the result is already stored in the ResultBackend."""
 
@@ -64,6 +49,22 @@ class OnTaskCompletion(Protocol):
         context: ExecutionContext,
         result: Any,  # noqa: ANN401
     ) -> None: ...
+
+
+@typing.runtime_checkable
+class OnTaskExecution(Protocol):
+    """Wraps task execution, working similarly to a middleware, it should return a value compatible with task return type."""
+
+    async def on_task_execution(
+        self,
+        args: Any,  # noqa: ANN401
+        kwargs: Any,  # noqa: ANN401
+        definition: TaskDefinition[Any, T],
+        context: ExecutionContext,
+        call_next: Callable[
+            [tuple[Any], dict[str, Any], ExecutionContext], Awaitable[T]
+        ],
+    ) -> T: ...
 
 
 AnyExtension = OnTaskSchedule | OnTaskExecution | OnTaskException | OnTaskCompletion

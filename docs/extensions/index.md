@@ -22,3 +22,7 @@ to register multiple extensions for a single feature.
 ::: aiotaskqueue.extensions.OnTaskSchedule
     options:
         show_docstring_parameters: false
+
+::: aiotaskqueue.extensions.OnTaskExecution
+    options:
+        show_docstring_parameters: false
