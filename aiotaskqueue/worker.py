@@ -30,6 +30,8 @@ class ExecutionContext:
     result_backend: ResultBackend | None
     tasks: TaskRouter
 
+    state: dict[str, Any] = dataclasses.field(default_factory=dict)
+
 
 @functools.lru_cache
 def _dependencies_to_inject(
@@ -62,14 +64,6 @@ class AsyncWorker:
         self._concurrency = concurrency
         self._stop_event = asyncio.Event()
 
-        self._execution_context = ExecutionContext(
-            configuration=self._configuration,
-            broker=self._broker,
-            publisher=self._publisher,
-            result_backend=self._result_backend,
-            tasks=self._tasks,
-        )
-
         self._ext_on_task_exception = [
             ext for ext in configuration.extensions if isinstance(ext, OnTaskException)
         ]
@@ -81,6 +75,15 @@ class AsyncWorker:
         ]
 
         self._active_tasks: dict[str, BrokerTask[Any]] = {}
+
+    def _create_execution_context(self) -> ExecutionContext:
+        return ExecutionContext(
+            configuration=self._configuration,
+            broker=self._broker,
+            publisher=self._publisher,
+            result_backend=self._result_backend,
+            tasks=self._tasks,
+        )
 
     async def run(self) -> None:
         send, recv = anyio.create_memory_object_stream[BrokerTask[object]]()
@@ -167,17 +170,22 @@ class AsyncWorker:
             self._active_tasks[broker_task.task.id] = broker_task
             task = broker_task.task
             task_definition = self._tasks.tasks[task.task_name]
+
+            execution_context = self._create_execution_context()
+
             try:
                 async with self._broker.ack_context(task=broker_task):
                     result = await self._call_task_fn(
-                        task=task, task_definition=task_definition
+                        task=task,
+                        task_definition=task_definition,
+                        execution_context=execution_context,
                     )
             except Exception as e:  # noqa: BLE001
                 for on_task_exception in self._ext_on_task_exception:
                     await on_task_exception.on_task_exception(
                         task=task,
                         definition=task_definition,
-                        context=self._execution_context,
+                        context=execution_context,
                         exception=e,
                     )
                 continue
@@ -191,7 +199,7 @@ class AsyncWorker:
                 await on_task_completion.on_task_completion(
                     task=task,
                     definition=task_definition,
-                    context=self._execution_context,
+                    context=execution_context,
                     result=result,
                 )
 
@@ -199,6 +207,7 @@ class AsyncWorker:
         self,
         task: TaskRecord,
         task_definition: TaskDefinition[Any, Any],
+        execution_context: ExecutionContext,
     ) -> object:
         args, kwargs = deserialize_task(
             task_definition=task_definition,
@@ -210,7 +219,7 @@ class AsyncWorker:
             types=(ExecutionContext,),
         ).items():
             if value is ExecutionContext:
-                obj = self._execution_context
+                obj = execution_context
             else:
                 raise ValueError
             kwargs.setdefault(key, obj)
@@ -222,7 +231,7 @@ class AsyncWorker:
         return await middleware_stack.call(
             args,
             kwargs,
-            context=self._execution_context,
+            context=execution_context,
         )
 
     async def _claim_pending_tasks(self, stop: asyncio.Event) -> None:
