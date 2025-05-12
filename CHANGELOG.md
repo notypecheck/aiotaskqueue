@@ -1,3 +1,9 @@
+## 0.11.0 (2025-05-12)
+
+### Feat
+
+- add state to ExecutionContext
+
 ## 0.10.0 (2025-04-09)
 
 ### Feat
