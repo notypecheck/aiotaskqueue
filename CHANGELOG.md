@@ -1,3 +1,9 @@
+## 0.12.0 (2025-05-14)
+
+### Refactor
+
+- internal task management
+
 ## 0.11.0 (2025-05-12)
 
 ### Feat
