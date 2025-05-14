@@ -3,13 +3,13 @@ import contextlib
 import dataclasses
 import functools
 import inspect
-import signal
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from typing import Any
 
 import anyio.abc
-from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
+from anyio.streams.memory import MemoryObjectReceiveStream
 
+from aiotaskqueue._util import ShutdownManager, TaskManager
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.extensions import OnTaskCompletion, OnTaskException
@@ -62,7 +62,6 @@ class AsyncWorker:
         self._tasks = tasks
         self._configuration = configuration
         self._concurrency = concurrency
-        self._stop_event = asyncio.Event()
 
         self._ext_on_task_exception = [
             ext for ext in configuration.extensions if isinstance(ext, OnTaskException)
@@ -75,6 +74,8 @@ class AsyncWorker:
         ]
 
         self._active_tasks: dict[str, BrokerTask[Any]] = {}
+        self._shutdown_manager = ShutdownManager()
+        self._task_manager = TaskManager()
 
     def _create_execution_context(self) -> ExecutionContext:
         return ExecutionContext(
@@ -88,48 +89,38 @@ class AsyncWorker:
     async def run(self) -> None:
         send, recv = anyio.create_memory_object_stream[BrokerTask[object]]()
 
-        signal.signal(
-            signal.SIGTERM,
-            lambda signalnum, handler, send_=send: self.stop(),  # type: ignore[misc]  # noqa: ARG005
-        )
-        signal.signal(
-            signal.SIGINT,
-            lambda signalnum, handler, send_=send: self.stop(),  # type: ignore[misc]  # noqa: ARG005
-        )
-
-        tasks: list[asyncio.Task[object]] = []
         async with (
             self._broker,
-            send,
             asyncio.TaskGroup() as tg,
-            self._shutdown_tasks(send=send, tasks=tasks),
+            self._shutdown_tasks(),
+            send,
         ):
-            tasks.append(
+            self._task_manager.add(
                 tg.create_task(
                     self._broker.run_worker_maintenance_tasks(
-                        stop=self._stop_event, config=self._configuration
+                        stop=self._shutdown_manager.event,
+                        config=self._configuration,
                     ),
                 )
             )
-            tasks.append(
-                tg.create_task(self._claim_pending_tasks(stop=self._stop_event))
+            self._task_manager.add(tg.create_task(self._claim_pending_tasks()))
+            self._task_manager.add(
+                *(
+                    tg.create_task(self._worker(recv=recv.clone()))
+                    for _ in range(self._concurrency)
+                )
             )
 
-            tasks.extend(
-                tg.create_task(self._worker(recv=recv.clone()))
-                for _ in range(self._concurrency)
-            )
-            stop_task = asyncio.create_task(self._stop_event.wait())
+            stop_task = asyncio.create_task(self._shutdown_manager.event.wait())
             while True:
                 read_task = asyncio.create_task(self._broker.read())
                 await asyncio.wait(
                     {stop_task, read_task},
                     return_when=asyncio.FIRST_COMPLETED,
                 )
-                if not read_task.done():
+                if self._shutdown_manager.event.is_set():
                     read_task.cancel()
                     break
-
                 for message in read_task.result():
                     if (
                         message.task.requeue_count
@@ -138,32 +129,22 @@ class AsyncWorker:
                         await self._broker.ack(message)
 
                     await send.send(message)
-                await asyncio.sleep(0)
-                if self._stop_event.is_set():
-                    break
 
     @contextlib.asynccontextmanager
-    async def _shutdown_tasks(
-        self, send: MemoryObjectSendStream[Any], tasks: list[asyncio.Task[object]]
-    ) -> AsyncIterator[None]:
+    async def _shutdown_tasks(self) -> AsyncIterator[None]:
         try:
             yield
         finally:
-            self.stop()
-            send.close()
-
             try:
                 async with asyncio.timeout(
                     self._configuration.task.shutdown_deadline.total_seconds(),
                 ):
-                    await asyncio.wait(tasks)
+                    await self._task_manager.wait_for_completion()
             except TimeoutError:
-                for task in tasks:
-                    task.cancel()
-                await asyncio.wait(tasks)
+                await self._task_manager.cancel()
 
     def stop(self) -> None:
-        self._stop_event.set()
+        self._shutdown_manager.shutdown()
 
     async def _worker(self, recv: MemoryObjectReceiveStream[BrokerTask[Any]]) -> None:
         async for broker_task in recv:
@@ -234,8 +215,8 @@ class AsyncWorker:
             context=execution_context,
         )
 
-    async def _claim_pending_tasks(self, stop: asyncio.Event) -> None:
-        closes = asyncio.create_task(stop.wait())
+    async def _claim_pending_tasks(self) -> None:
+        stop_task = asyncio.create_task(self._shutdown_manager.event.wait())
         while True:
             if self._active_tasks:
                 await self._broker.tasks_healthcheck(*self._active_tasks.values())
@@ -246,7 +227,7 @@ class AsyncWorker:
                 )
             )
             await asyncio.wait(
-                {closes, sleep_task}, return_when=asyncio.FIRST_COMPLETED
+                {stop_task, sleep_task}, return_when=asyncio.FIRST_COMPLETED
             )
-            if stop.is_set():
+            if self._shutdown_manager.event.is_set():
                 return
