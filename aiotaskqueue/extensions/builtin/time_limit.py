@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from typing import Any
@@ -9,6 +10,7 @@ from aiotaskqueue.tasks import Marker, TaskDefinition
 from aiotaskqueue.worker import ExecutionContext
 
 
+@dataclasses.dataclass(slots=True)
 class TimeLimit(Marker):
     limit: timedelta
 
