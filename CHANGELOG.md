@@ -1,3 +1,9 @@
+## 0.13.0 (2025-05-23)
+
+### Feat
+
+- add built-in TimeLimitExtension
+
 ## 0.12.0 (2025-05-14)
 
 ### Refactor
