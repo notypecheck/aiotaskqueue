@@ -1,3 +1,9 @@
+## 0.13.1 (2025-05-23)
+
+### Fix
+
+- convert TimeLimit into a dataclass
+
 ## 0.13.0 (2025-05-23)
 
 ### Feat
