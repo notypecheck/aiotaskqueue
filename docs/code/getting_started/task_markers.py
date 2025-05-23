@@ -1,5 +1,5 @@
 from aiotaskqueue import TaskRouter
-from aiotaskqueue.extensions.retry import Retry
+from aiotaskqueue.extensions.builtin import Retry
 
 router = TaskRouter()
 

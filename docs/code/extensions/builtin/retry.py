@@ -1,5 +1,5 @@
 from aiotaskqueue import Configuration, task
-from aiotaskqueue.extensions.retry import Retry, RetryExtension
+from aiotaskqueue.extensions.builtin import Retry, RetryExtension
 from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
 
 

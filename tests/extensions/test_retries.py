@@ -4,7 +4,7 @@ import contextlib
 import pytest
 from aiotaskqueue import Configuration, Publisher, TaskRouter
 from aiotaskqueue.broker.abc import Broker
-from aiotaskqueue.extensions.retry import Retry, RetryExtension
+from aiotaskqueue.extensions.builtin import Retry, RetryExtension
 from aiotaskqueue.worker import AsyncWorker
 
 from tests.utils import run_worker_until
