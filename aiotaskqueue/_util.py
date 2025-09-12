@@ -18,7 +18,7 @@ def utc_now() -> datetime:
 def extract_tasks(
     tasks: TaskRouter | Sequence[TaskDefinition[Any, Any]],
 ) -> Sequence[TaskDefinition[Any, Any]]:
-    from aiotaskqueue.router import TaskRouter
+    from aiotaskqueue.router import TaskRouter  # noqa: PLC0415
 
     if isinstance(tasks, TaskRouter):
         return tuple(tasks.tasks.values())

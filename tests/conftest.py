@@ -23,7 +23,7 @@ pytest_plugins = [
 
 @pytest.fixture(scope="session", autouse=True, params=["asyncio"])
 def anyio_backend(request: SubRequest) -> str:
-    return cast(str, request.param)
+    return cast("str", request.param)
 
 
 @pytest.fixture

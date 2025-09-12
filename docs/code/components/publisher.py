@@ -5,10 +5,12 @@ from aiotaskqueue import Configuration, Publisher, task
 from aiotaskqueue.broker.inmemory import InMemoryBroker
 from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
 
+logger = logging.getLogger("app")
+
 
 @task(name="send-email")
 async def send_email(email: str, message: str) -> None:
-    logging.info("Sending email to %s, length: %s", email, len(message))
+    logger.info("Sending email to %s, length: %s", email, len(message))
 
 
 async def main() -> None:

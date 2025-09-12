@@ -44,7 +44,7 @@ async def test_include_raises_error_if_tasks_have_duplicate_names() -> None:
     router = TaskRouter((task_1,))
     router_2 = TaskRouter((task_2,))
 
-    with pytest.raises(ValueError, match="Task .* already registered"):
+    with pytest.raises(ValueError, match="Task .* already registered"):  # noqa: RUF043
         router.include(router_2)
 
     # Should allow if it's the same task

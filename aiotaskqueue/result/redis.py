@@ -47,7 +47,7 @@ class RedisResultBackend(ResultBackend):
             raw_value,
             return_type=definition.return_type,
         )
-        return Some(cast(TResult, result))
+        return Some(cast("TResult", result))
 
     async def wait(
         self,
@@ -64,7 +64,7 @@ class RedisResultBackend(ResultBackend):
             raw_value,
             return_type=task.instance.task.return_type,
         )
-        return cast(TResult, result)
+        return cast("TResult", result)
 
     async def _deserialize(
         self,

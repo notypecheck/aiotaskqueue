@@ -28,4 +28,4 @@ class crontab(Schedule):  # noqa: N801
             raise ValueError(msg)
 
     def next_schedule(self, now: datetime) -> datetime:
-        return croniter(self.expression, now).get_next(datetime)  # type: ignore[no-any-return]
+        return croniter(self.expression, now).get_next(datetime)

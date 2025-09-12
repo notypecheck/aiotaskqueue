@@ -1,6 +1,5 @@
 import asyncio
 import dataclasses
-import logging
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import timedelta
 from types import TracebackType
@@ -12,6 +11,7 @@ from typing_extensions import Doc
 
 from aiotaskqueue.broker.abc import Broker, BrokerAckContextMixin
 from aiotaskqueue.config import Configuration
+from aiotaskqueue.logging import logger
 from aiotaskqueue.serialization import TaskRecord
 from aiotaskqueue.tasks import BrokerTask
 
@@ -193,7 +193,7 @@ class RedisBroker(BrokerAckContextMixin, Broker):
             count=1000,
             min_idle_time=int(min_idle_time.total_seconds() * 1000),
         )
-        logging.debug("Claimed %s", claimed)
+        logger.debug("Claimed %s", claimed)
 
         _, messages, _ = claimed
         for record_id, record in messages:
@@ -241,7 +241,7 @@ class RedisBroker(BrokerAckContextMixin, Broker):
             self._broker_config.group_name,
             task.meta.id,
         )
-        logging.info("Acked %s, redis id %s", task.task.id, task.meta.id)
+        logger.info("Acked %s, redis id %s", task.task.id, task.meta.id)
 
     async def tasks_healthcheck(self, *tasks: BrokerTask[RedisMeta]) -> None:
         task_ids = [task.meta.id for task in tasks]
