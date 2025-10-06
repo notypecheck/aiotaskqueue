@@ -25,6 +25,9 @@ redis = [
 scheduler = [
     "croniter>=6.0.0",
 ]
+sqlalchemy = [
+    "sqlalchemy[asyncio]>=2.0.43",
+]
 
 [dependency-groups]
 docs = [
@@ -36,6 +39,7 @@ docs = [
     "mkdocstrings[python]>=0.30.0",
 ]
 test = [
+    "asyncpg>=0.30.0",
     "coverage>=7.10.6",
     "pytest>=8.4.2",
     "testcontainers>=4.13.0",
@@ -151,6 +155,9 @@ builtins-ignorelist = ["type"]
 
 
 [tool.deptry.per_rule_ignores]
+DEP002 = [
+    "asyncpg",
+]
 DEP003 = [
     "pydantic",
 ]

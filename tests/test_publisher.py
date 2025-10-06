@@ -1,4 +1,4 @@
-from aiotaskqueue.broker.inmemory import InMemoryBroker
+from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.publisher import Publisher
 from aiotaskqueue.serialization import deserialize_task
@@ -7,7 +7,7 @@ from tests.tasks import noop_task, task_with_params
 from tests.utils import capture_broker_messages
 
 
-async def test_enqueue(broker: InMemoryBroker, publisher: Publisher) -> None:
+async def test_enqueue(broker: Broker, publisher: Publisher) -> None:
     task_instance = noop_task()
 
     async with capture_broker_messages(broker, count=1) as messages:
@@ -19,7 +19,7 @@ async def test_enqueue(broker: InMemoryBroker, publisher: Publisher) -> None:
 
 
 async def test_enqueue_with_params(
-    broker: InMemoryBroker,
+    broker: Broker,
     publisher: Publisher,
     configuration: Configuration,
 ) -> None:

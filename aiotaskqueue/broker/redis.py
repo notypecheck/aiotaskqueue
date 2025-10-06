@@ -1,6 +1,6 @@
 import asyncio
 import dataclasses
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Sequence
 from datetime import timedelta
 from types import TracebackType
 from typing import TYPE_CHECKING, Annotated, Self
@@ -9,6 +9,7 @@ import msgspec.json
 from redis.asyncio import Redis
 from typing_extensions import Doc
 
+from aiotaskqueue._util import run_until_stopped
 from aiotaskqueue.broker.abc import Broker, BrokerAckContextMixin
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.logging import logger
@@ -46,20 +47,6 @@ class RedisBrokerConfig:
     xtrim_interval: Annotated[timedelta, Doc("Interval between XTRIM calls")] = (
         timedelta(minutes=30)
     )
-
-
-async def _run_until_stopped(
-    func: Callable[[], Awaitable[None]],
-    interval: timedelta,
-    stop: asyncio.Event,
-) -> None:
-    stop_task = asyncio.create_task(stop.wait())
-    while True:
-        await func()
-        sleep_task = asyncio.create_task(asyncio.sleep(interval.total_seconds()))
-        await asyncio.wait({stop_task, sleep_task}, return_when=asyncio.FIRST_COMPLETED)
-        if stop.is_set():
-            return
 
 
 def _message_id_key(a: str) -> tuple[int, int]:
@@ -167,7 +154,7 @@ class RedisBroker(BrokerAckContextMixin, Broker):
     ) -> None:
         async with asyncio.TaskGroup() as tg:
             tg.create_task(
-                _run_until_stopped(
+                run_until_stopped(
                     lambda: self._maintenance_claim_pending_records(
                         min_idle_time=config.task.timeout_interval
                     ),
@@ -176,7 +163,7 @@ class RedisBroker(BrokerAckContextMixin, Broker):
                 ),
             )
             tg.create_task(
-                _run_until_stopped(
+                run_until_stopped(
                     self._trim_stream, stop=stop, interval=timedelta(seconds=1)
                 ),
             )

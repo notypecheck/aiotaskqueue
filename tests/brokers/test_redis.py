@@ -1,8 +1,6 @@
 import uuid
-from collections.abc import AsyncIterator
 from datetime import datetime
 
-import pytest
 import time_machine
 from aiotaskqueue._util import utc_now
 from aiotaskqueue.broker.redis import RedisBroker, RedisBrokerConfig, RedisClient
@@ -11,15 +9,6 @@ from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
 
 from tests.tasks import task_with_params
 from tests.utils import capture_broker_messages
-
-
-@pytest.fixture
-async def redis_broker(redis: RedisClient) -> AsyncIterator[RedisBroker]:
-    async with RedisBroker(
-        redis=redis,
-        consumer_name="pytest",
-    ) as broker:
-        yield broker
 
 
 async def test_broker_init(redis: RedisClient) -> None:

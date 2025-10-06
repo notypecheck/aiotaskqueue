@@ -4,20 +4,13 @@ from datetime import datetime
 
 import msgspec
 import pytest
-from aiotaskqueue import Configuration, task
+from aiotaskqueue import task
 from aiotaskqueue.broker.redis import RedisClient
 from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.result.redis import RedisResultBackend
 from aiotaskqueue.tasks import RunningTask
 
 from tests.models import MsgspecModel
-
-
-@pytest.fixture
-async def result_backend(
-    redis: RedisClient, configuration: Configuration
-) -> RedisResultBackend:
-    return RedisResultBackend(redis=redis, configuration=configuration)
 
 
 @pytest.fixture
@@ -32,11 +25,11 @@ async def _task() -> MsgspecModel:
 
 async def test_set(
     redis: RedisClient,
-    result_backend: ResultBackend,
+    redis_result_backend: RedisResultBackend,
     model: MsgspecModel,
 ) -> None:
     task_id = str(uuid.uuid4())
-    await result_backend.set(task_id=task_id, value=model)
+    await redis_result_backend.set(task_id=task_id, value=model)
 
     stored = await redis.get(f"aiotaskqueue:result:{task_id}")
     assert stored == f"msgspec,{msgspec.json.encode(model).decode()}".encode()
