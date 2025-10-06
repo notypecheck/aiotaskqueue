@@ -124,7 +124,10 @@ class SqlalchemyPostgresBroker(Broker):
         )
 
         async with self._session_maker.begin() as session:
-            records = (await session.scalars(stmt)).all()
+            records = sorted(
+                (await session.scalars(stmt)).all(),
+                key=lambda item: (item.enqueue_time, item.id),
+            )
             return [
                 BrokerTask(
                     meta=SqlalchemyBrokerMeta(id=record.id),
