@@ -62,7 +62,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy'", specifier = ">=2.0.43" },
     { name = "typing-extensions", specifier = ">=4.8.0" },
 ]
-provides-extras = ["redis", "scheduler", "sqlalchemy", "test"]
+provides-extras = ["redis", "scheduler", "sqlalchemy"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pydantic", specifier = ">=2.11.7" }]
