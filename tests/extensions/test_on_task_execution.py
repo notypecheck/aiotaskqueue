@@ -39,7 +39,7 @@ async def test_on_task_execution_extension(
     configuration: Configuration,
     broker: Broker,
     publisher: Publisher,
-    redis_result_backend: ResultBackend,
+    result_backend: ResultBackend,
 ) -> None:
     done = asyncio.Event()
 
@@ -60,12 +60,12 @@ async def test_on_task_execution_extension(
         configuration=configuration,
         broker=broker,
         tasks=router,
-        result_backend=redis_result_backend,
+        result_backend=result_backend,
         concurrency=10,
     )
 
     async with run_worker_until(worker, done):
         running_task = await publisher.enqueue(task=test_task(arg=1, kwarg=2))
 
-    result = await redis_result_backend.wait(running_task)
+    result = await result_backend.wait(running_task)
     assert result == result_override

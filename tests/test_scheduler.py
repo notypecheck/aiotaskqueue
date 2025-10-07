@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import time_machine
-from aiotaskqueue.broker.inmemory import InMemoryBroker
+from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.publisher import Publisher
 from aiotaskqueue.router import task
 from aiotaskqueue.scheduler import Scheduler, crontab, every
@@ -53,7 +53,7 @@ async def test_invalid_crontab_expression() -> None:
 
 
 async def test_scheduler(
-    broker: InMemoryBroker,
+    broker: Broker,
     publisher: Publisher,
 ) -> None:
     every_ = every(timedelta(minutes=5))

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import signal
-from collections.abc import Callable, Sequence
-from datetime import UTC, datetime
+from collections.abc import Awaitable, Callable, Sequence
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Final
 
 if TYPE_CHECKING:
@@ -64,3 +64,17 @@ class TaskManager:
         for task in self._tasks:
             task.cancel()
         await self.wait_for_completion()
+
+
+async def run_until_stopped(
+    func: Callable[[], Awaitable[None]],
+    interval: timedelta,
+    stop: asyncio.Event,
+) -> None:
+    stop_task = asyncio.create_task(stop.wait())
+    while True:
+        await func()
+        sleep_task = asyncio.create_task(asyncio.sleep(interval.total_seconds()))
+        await asyncio.wait({stop_task, sleep_task}, return_when=asyncio.FIRST_COMPLETED)
+        if stop.is_set():
+            return

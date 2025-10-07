@@ -16,13 +16,13 @@ def execution_context(
     broker: Broker,
     configuration: Configuration,
     publisher: Publisher,
-    redis_result_backend: ResultBackend,
+    result_backend: ResultBackend,
 ) -> ExecutionContext:
     return ExecutionContext(
         configuration=configuration,
         broker=broker,
         publisher=publisher,
-        result_backend=redis_result_backend,
+        result_backend=result_backend,
         tasks=TaskRouter([sequential_task]),
     )
 
@@ -31,7 +31,7 @@ async def test_sequential(
     broker: Broker,
     configuration: Configuration,
     publisher: Publisher,
-    redis_result_backend: ResultBackend,
+    result_backend: ResultBackend,
 ) -> None:
     count = random.randint(3, 10)
 
@@ -46,7 +46,7 @@ async def test_sequential(
 
     worker = AsyncWorker(
         broker=broker,
-        result_backend=redis_result_backend,
+        result_backend=result_backend,
         configuration=configuration,
         concurrency=10,
         tasks=TaskRouter([test_task, sequential_task]),
@@ -96,7 +96,6 @@ async def test_should_skip_executed_tasks(
         k=random_tasks_to_mark_as_completed,
     ):
         await execution_context.result_backend.set(random_task.id, value=None)
-
     expected_result = [
         value
         for record, instance, value in zip(
