@@ -17,7 +17,26 @@ class TaskStatus(enum.Enum):
     FAILED = enum.auto()
 
 
-class PostgresBrokerTaskMixin:
+class ScheduledTaskStatus(enum.Enum):
+    PENDING = enum.auto()
+    SCHEDULED = enum.auto()
+
+
+class _TaskPayloadMixin:
+    id: Mapped[str] = mapped_column(primary_key=True)
+
+    task_name: Mapped[str]
+    requeue_count: Mapped[int] = mapped_column(insert_default=0, server_default="0")
+    enqueue_time: Mapped[datetime_tz]
+
+    args: Mapped[tuple[tuple[SerializationBackendId, str], ...]] = mapped_column(JSON())
+    kwargs: Mapped[dict[str, tuple[SerializationBackendId, str]]] = mapped_column(
+        JSON()
+    )
+    meta: Mapped[dict[str, Any]] = mapped_column(JSON())
+
+
+class SqlalchemyBrokerTaskMixin(_TaskPayloadMixin):
     __tablename__ = "aiotaskqueue_task"
     __table_args__ = (
         Index(
@@ -35,17 +54,15 @@ class PostgresBrokerTaskMixin:
         ),
     )
 
-    id: Mapped[str] = mapped_column(primary_key=True)
     queue_name: Mapped[str] = mapped_column()
     status: Mapped[TaskStatus] = mapped_column(Enum(TaskStatus, native_enum=False))
     latest_healtcheck: Mapped[datetime_tz]
 
-    task_name: Mapped[str]
-    requeue_count: Mapped[int] = mapped_column(insert_default=0, server_default="0")
-    enqueue_time: Mapped[datetime_tz]
 
-    args: Mapped[tuple[tuple[SerializationBackendId, str], ...]] = mapped_column(JSON())
-    kwargs: Mapped[dict[str, tuple[SerializationBackendId, str]]] = mapped_column(
-        JSON()
+class SqlalchemyScheduledTaskMixin(_TaskPayloadMixin):
+    __tablename__ = "aiotaskqueue_scheduled_task"
+
+    status: Mapped[ScheduledTaskStatus] = mapped_column(
+        Enum(ScheduledTaskStatus, native_enum=False)
     )
-    meta: Mapped[dict[str, Any]] = mapped_column(JSON())
+    scheduled_at: Mapped[datetime_tz]

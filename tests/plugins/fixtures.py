@@ -2,12 +2,20 @@ from collections.abc import AsyncIterator, Mapping
 
 import pytest
 from _pytest.fixtures import SubRequest
-from aiotaskqueue.broker.abc import Broker
-from aiotaskqueue.broker.inmemory import InMemoryBroker
-from aiotaskqueue.broker.redis import RedisBroker, RedisClient
+from aiotaskqueue.broker.abc import Broker, ScheduledBroker
+from aiotaskqueue.broker.inmemory import InMemoryBroker, InMemoryScheduledBroker
+from aiotaskqueue.broker.redis import (
+    RedisBroker,
+    RedisClient,
+    RedisScheduledBroker,
+)
 from aiotaskqueue.broker.sql.sqlalchemy.broker import (
     SqlalchemyBrokerConfig,
     SqlalchemyPostgresBroker,
+)
+from aiotaskqueue.broker.sql.sqlalchemy.schedulerd_broker import (
+    SqlalchemyPostgresScheduledBroker,
+    SqlalchemyScheduledBrokerConfig,
 )
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.publisher import Publisher
@@ -21,7 +29,11 @@ from aiotaskqueue.result.sql.sqlalchemy.backend import (
 from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from tests.models import PostgresBrokerTask, PostgresResultTask
+from tests.models import (
+    SqlalchemyBrokerTask,
+    SqlalchemyResultTask,
+    SqlalchemyScheduledTask,
+)
 
 
 @pytest.fixture
@@ -37,6 +49,17 @@ def inmemory_broker() -> InMemoryBroker:
 
 
 @pytest.fixture
+async def inmemory_scheduled_broker() -> AsyncIterator[InMemoryScheduledBroker]:
+    async with InMemoryScheduledBroker() as broker:
+        yield broker
+
+
+@pytest.fixture
+def inmemory_result_backend(configuration: Configuration) -> InMemoryResultBackend:
+    return InMemoryResultBackend(configuration=configuration)
+
+
+@pytest.fixture
 async def redis_broker(redis: RedisClient) -> AsyncIterator[RedisBroker]:
     async with RedisBroker(
         redis=redis,
@@ -46,14 +69,56 @@ async def redis_broker(redis: RedisClient) -> AsyncIterator[RedisBroker]:
 
 
 @pytest.fixture
+async def redis_scheduled_broker(
+    redis: RedisClient,
+) -> AsyncIterator[RedisScheduledBroker]:
+    async with RedisScheduledBroker(redis=redis) as broker:
+        yield broker
+
+
+@pytest.fixture
+async def redis_result_backend(
+    redis: RedisClient, configuration: Configuration
+) -> RedisResultBackend:
+    return RedisResultBackend(redis=redis, configuration=configuration)
+
+
+@pytest.fixture
 async def sqlalchemy_broker(
     sqlalchemy_session_maker: async_sessionmaker[AsyncSession],
 ) -> AsyncIterator[SqlalchemyPostgresBroker]:
     async with SqlalchemyPostgresBroker(
         engine=sqlalchemy_session_maker,
-        broker_config=SqlalchemyBrokerConfig(task_table=PostgresBrokerTask),
+        broker_config=SqlalchemyBrokerConfig(task_table=SqlalchemyBrokerTask),
     ) as broker:
         yield broker
+
+
+@pytest.fixture
+async def sqlalchemy_scheduled_broker(
+    sqlalchemy_session_maker: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[SqlalchemyPostgresScheduledBroker]:
+    async with SqlalchemyPostgresScheduledBroker(
+        engine=sqlalchemy_session_maker,
+        broker_config=SqlalchemyScheduledBrokerConfig(
+            task_table=SqlalchemyScheduledTask
+        ),
+    ) as broker:
+        yield broker
+
+
+@pytest.fixture
+async def sqlalchemy_result_backend(
+    sqlalchemy_session_maker: async_sessionmaker[AsyncSession],
+    configuration: Configuration,
+) -> SqlalchemyPostgresResultBackend:
+    return SqlalchemyPostgresResultBackend(
+        engine=sqlalchemy_session_maker,
+        backend_config=SqlalchemyResultBackendConfig(
+            result_table=SqlalchemyResultTask,
+        ),
+        configuration=configuration,
+    )
 
 
 @pytest.fixture
@@ -84,34 +149,30 @@ async def broker(
 
 
 @pytest.fixture
-def publisher(broker: Broker, configuration: Configuration) -> Publisher:
-    return Publisher(broker=broker, config=configuration)
+async def scheduled_broker_mapping(
+    inmemory_scheduled_broker: InMemoryScheduledBroker,
+    redis_scheduled_broker: RedisScheduledBroker,
+    sqlalchemy_scheduled_broker: SqlalchemyPostgresScheduledBroker,
+) -> Mapping[str, ScheduledBroker]:
+    return {
+        "inmemory_scheduled_broker": inmemory_scheduled_broker,
+        "redis_scheduled_broker": redis_scheduled_broker,
+        "sqlalchemy_scheduled_broker": sqlalchemy_scheduled_broker,
+    }
 
 
-@pytest.fixture
-def inmemory_result_backend(configuration: Configuration) -> InMemoryResultBackend:
-    return InMemoryResultBackend(configuration=configuration)
-
-
-@pytest.fixture
-async def redis_result_backend(
-    redis: RedisClient, configuration: Configuration
-) -> RedisResultBackend:
-    return RedisResultBackend(redis=redis, configuration=configuration)
-
-
-@pytest.fixture
-async def sqlalchemy_result_backend(
-    sqlalchemy_session_maker: async_sessionmaker[AsyncSession],
-    configuration: Configuration,
-) -> SqlalchemyPostgresResultBackend:
-    return SqlalchemyPostgresResultBackend(
-        engine=sqlalchemy_session_maker,
-        backend_config=SqlalchemyResultBackendConfig(
-            result_table=PostgresResultTask,
-        ),
-        configuration=configuration,
-    )
+@pytest.fixture(
+    params=[
+        "inmemory_scheduled_broker",
+        "redis_scheduled_broker",
+        "sqlalchemy_scheduled_broker",
+    ],
+)
+async def scheduled_broker(
+    scheduled_broker_mapping: Mapping[str, ScheduledBroker],
+    request: SubRequest,
+) -> ScheduledBroker:
+    return scheduled_broker_mapping[request.param]
 
 
 @pytest.fixture
@@ -139,3 +200,15 @@ async def result_backend(
     request: SubRequest,
 ) -> ResultBackend:
     return result_backend_mapping[request.param]
+
+
+@pytest.fixture
+def publisher(
+    broker: Broker,
+    configuration: Configuration,
+) -> Publisher:
+    return Publisher(
+        broker=broker,
+        config=configuration,
+        scheduled_broker=None,
+    )

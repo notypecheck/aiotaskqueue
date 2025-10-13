@@ -11,7 +11,7 @@ from typing_extensions import Doc
 from aiotaskqueue._types import TResult
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.result.abc import ResultBackend
-from aiotaskqueue.result.sql.sqlalchemy.models import PostgresResultTaskMixin
+from aiotaskqueue.result.sql.sqlalchemy.models import SqlalchemyResultTaskMixin
 from aiotaskqueue.serialization import SerializationBackendId, serialize
 from aiotaskqueue.tasks import RunningTask, TaskDefinition
 from aiotaskqueue.types import Some
@@ -19,7 +19,7 @@ from aiotaskqueue.types import Some
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class SqlalchemyResultBackendConfig:
-    result_table: type[PostgresResultTaskMixin]
+    result_table: type[SqlalchemyResultTaskMixin]
     poll_interval: timedelta = timedelta(milliseconds=100)
 
 
@@ -109,7 +109,7 @@ class SqlalchemyPostgresResultBackend(ResultBackend):
         stmt = select(table).where(table.key == self._cache_key(task.id))
         while True:
             async with self._session_maker.begin() as session:
-                model: PostgresResultTaskMixin | None = None
+                model: SqlalchemyResultTaskMixin | None = None
                 model = await session.scalar(stmt)
                 if model is not None:
                     result = self._deserialize(

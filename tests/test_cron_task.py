@@ -7,7 +7,8 @@ import time_machine
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.publisher import Publisher
 from aiotaskqueue.router import task
-from aiotaskqueue.scheduler import Scheduler, crontab, every
+from aiotaskqueue.scheduler import RecurringScheduler
+from aiotaskqueue.scheduler.schedules import crontab, every
 
 from tests.utils import capture_broker_messages
 
@@ -52,7 +53,7 @@ async def test_invalid_crontab_expression() -> None:
         crontab("* * * *")
 
 
-async def test_scheduler(
+async def test_cron_scheduler(
     broker: Broker,
     publisher: Publisher,
 ) -> None:
@@ -73,7 +74,9 @@ async def test_scheduler(
                 if count == attempts:
                     timeout.reschedule(-1)
 
-            scheduler = Scheduler(publisher=publisher, tasks=[every_task], sleep=_sleep)
+            scheduler = RecurringScheduler(
+                publisher=publisher, tasks=[every_task], sleep=_sleep
+            )
             with contextlib.suppress(asyncio.TimeoutError):
                 async with timeout:
                     await scheduler.run()

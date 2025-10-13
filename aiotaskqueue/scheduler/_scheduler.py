@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import warnings
 from asyncio import PriorityQueue
 from collections.abc import Callable, Coroutine, Mapping, Sequence
 from datetime import datetime
@@ -8,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from aiotaskqueue import Configuration
 from aiotaskqueue._util import ShutdownManager, extract_tasks, utc_now
+from aiotaskqueue.broker.abc import Broker, ScheduledBroker
 from aiotaskqueue.extensions import OnTaskSchedule
 
 if TYPE_CHECKING:
@@ -16,14 +18,14 @@ if TYPE_CHECKING:
     from aiotaskqueue.tasks import TaskDefinition
 
 
-class Scheduler:
+class RecurringScheduler:
     def __init__(
         self,
         publisher: Publisher,
         tasks: TaskRouter | Sequence[TaskDefinition[Any, Any]],
         *,
         configuration: Configuration | None = None,
-        sleep: Callable[[float], Coroutine[None, None, None]] = asyncio.sleep,
+        sleep: Callable[[float], Coroutine[Any, Any, None]] = asyncio.sleep,
     ) -> None:
         self.tasks: Mapping[str, TaskDefinition[Any, Any]] = {
             task.name: task for task in extract_tasks(tasks) if task.schedule
@@ -85,3 +87,58 @@ class Scheduler:
         schedule_datetime = task.schedule.next_schedule(now)
         await self._scheduled_tasks.put((schedule_datetime, task.name))
         return schedule_datetime
+
+
+class Scheduler(RecurringScheduler):
+    def __init__(
+        self,
+        publisher: Publisher,
+        tasks: TaskRouter | Sequence[TaskDefinition[Any, Any]],
+        *,
+        configuration: Configuration | None = None,
+        sleep: Callable[[float], Coroutine[Any, Any, None]] = asyncio.sleep,
+    ) -> None:
+        warnings.warn(
+            "Scheduler is deprecated. Use RecurringScheduler instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(
+            publisher=publisher,
+            tasks=tasks,
+            configuration=configuration,
+            sleep=sleep,
+        )
+
+
+class ScheduledTaskScheduler:
+    def __init__(
+        self,
+        *,
+        broker: Broker,
+        scheduled_broker: ScheduledBroker,
+        sleep: Callable[[float], Coroutine[Any, Any, None]] = asyncio.sleep,
+    ) -> None:
+        self._broker = broker
+        self._scheduled_broker = scheduled_broker
+        self._sleep = sleep
+
+        self._shutdown_manager = ShutdownManager()
+
+    async def run(self) -> None:
+        stop_task = asyncio.create_task(self._shutdown_manager.event.wait())
+        while True:
+            async with self._scheduled_broker.get_scheduled_tasks(
+                now=utc_now(),
+            ) as tasks:
+                await self._broker.enqueue_batch(tasks)
+
+            sleep_task = asyncio.create_task(self._sleep(1))
+            await asyncio.wait(
+                {stop_task, sleep_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if self._shutdown_manager.event.is_set():
+                return
+
+    def stop(self) -> None:
+        self._shutdown_manager.shutdown()

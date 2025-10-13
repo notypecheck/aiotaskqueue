@@ -1,7 +1,7 @@
 import asyncio
 
 from aiotaskqueue.publisher import Publisher
-from aiotaskqueue.scheduler import Scheduler
+from aiotaskqueue.scheduler import RecurringScheduler
 
 from example._components import broker, configuration
 from example.tasks import router
@@ -9,7 +9,7 @@ from example.tasks import router
 
 async def main() -> None:
     async with broker:
-        scheduler = Scheduler(
+        scheduler = RecurringScheduler(
             publisher=Publisher(broker=broker, config=configuration),
             tasks=router,
         )

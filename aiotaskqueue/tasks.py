@@ -4,6 +4,7 @@ import dataclasses
 import inspect
 import typing
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from datetime import datetime
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -61,6 +62,11 @@ class TaskInstance(Generic[P, TResult]):
 class RunningTask(Generic[TResult]):
     id: str
     instance: TaskInstance[Any, TResult]
+
+
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class ScheduledTask(RunningTask[TResult]):
+    scheduled_at: datetime
 
 
 _TBrokerMeta = TypeVar("_TBrokerMeta")

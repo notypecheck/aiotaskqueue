@@ -1,8 +1,7 @@
-from ._scheduler import Scheduler
-from ._schedules import crontab, every
+from ._scheduler import RecurringScheduler, ScheduledTaskScheduler, Scheduler
 
 __all__ = [
+    "RecurringScheduler",
+    "ScheduledTaskScheduler",
     "Scheduler",
-    "crontab",
-    "every",
 ]
