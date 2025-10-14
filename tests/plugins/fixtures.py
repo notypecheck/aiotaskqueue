@@ -3,19 +3,14 @@ from collections.abc import AsyncIterator, Mapping
 import pytest
 from _pytest.fixtures import SubRequest
 from aiotaskqueue.broker.abc import Broker, ScheduledBroker
-from aiotaskqueue.broker.inmemory import InMemoryBroker, InMemoryScheduledBroker
+from aiotaskqueue.broker.inmemory import InMemoryBroker
 from aiotaskqueue.broker.redis import (
     RedisBroker,
     RedisClient,
-    RedisScheduledBroker,
 )
 from aiotaskqueue.broker.sql.sqlalchemy.broker import (
     SqlalchemyBrokerConfig,
     SqlalchemyPostgresBroker,
-)
-from aiotaskqueue.broker.sql.sqlalchemy.schedulerd_broker import (
-    SqlalchemyPostgresScheduledBroker,
-    SqlalchemyScheduledBrokerConfig,
 )
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.publisher import Publisher
@@ -25,6 +20,12 @@ from aiotaskqueue.result.redis import RedisResultBackend
 from aiotaskqueue.result.sql.sqlalchemy.backend import (
     SqlalchemyPostgresResultBackend,
     SqlalchemyResultBackendConfig,
+)
+from aiotaskqueue.scheduled_broker.inmemory import InMemoryScheduledBroker
+from aiotaskqueue.scheduled_broker.redis import RedisScheduledBroker
+from aiotaskqueue.scheduled_broker.sql.sqlalchemy.schedulerd_broker import (
+    SqlalchemyPostgresScheduledBroker,
+    SqlalchemyScheduledBrokerConfig,
 )
 from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker

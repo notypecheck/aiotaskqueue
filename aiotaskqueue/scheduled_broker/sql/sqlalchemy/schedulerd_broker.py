@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from typing_extensions import Doc
 
 from aiotaskqueue._util import utc_now
-from aiotaskqueue.broker.abc import ScheduledBroker
-from aiotaskqueue.broker.sql.sqlalchemy.models import (
+from aiotaskqueue.scheduled_broker.abc import ScheduledBroker
+from aiotaskqueue.scheduled_broker.sql.sqlalchemy.models import (
     ScheduledTaskStatus,
     SqlalchemyScheduledTaskMixin,
 )

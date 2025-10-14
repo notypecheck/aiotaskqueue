@@ -1,7 +1,6 @@
-from ._scheduler import RecurringScheduler, ScheduledTaskScheduler, Scheduler
+from ._scheduler import RecurringScheduler, Scheduler
 
 __all__ = [
     "RecurringScheduler",
-    "ScheduledTaskScheduler",
     "Scheduler",
 ]
