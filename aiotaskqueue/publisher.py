@@ -5,7 +5,8 @@ from aiotaskqueue._types import P, TResult
 from aiotaskqueue._util import utc_now
 from aiotaskqueue.broker.abc import Broker, ScheduledBroker
 from aiotaskqueue.config import Configuration
-from aiotaskqueue.serialization import serialize_task
+from aiotaskqueue.errors import ImproperlyConfiguredError
+from aiotaskqueue.serialization import TaskRecord, serialize_task
 from aiotaskqueue.tasks import RunningTask, ScheduledTask, TaskInstance
 
 
@@ -54,50 +55,45 @@ class Publisher:
         schedule_at: datetime | None = None,
         id: str | None = None,  # noqa: A002
     ) -> RunningTask[TResult] | ScheduledTask[TResult]:
-        if (after or schedule_at) is not None:
-            return await self._enqueue_schedule(
-                task=task,
-                after=after,
-                schedule_at=schedule_at,
-                id=id,
-            )
-        return await self._enqueue(task=task, id=id)
-
-    async def _enqueue(
-        self,
-        task: TaskInstance[P, TResult],
-        *,
-        id: str | None = None,  # noqa: A002
-    ) -> RunningTask[TResult]:
         record = serialize_task(
             task,
             default_backend=self._config.default_serialization_backend,
             serialization_backends=self._config.serialization_backends,
             id=id,
         )
+        if (after or schedule_at) is not None:
+            return await self._enqueue_schedule(
+                task=task,
+                record=record,
+                after=after,
+                schedule_at=schedule_at,
+            )
+        return await self._enqueue(task=task, record=record)
+
+    async def _enqueue(
+        self,
+        task: TaskInstance[P, TResult],
+        record: TaskRecord,
+    ) -> RunningTask[TResult]:
         await self._broker.enqueue(record)
         return RunningTask(instance=task, id=record.id)
 
     async def _enqueue_schedule(
         self,
         task: TaskInstance[P, TResult],
+        record: TaskRecord,
         *,
         after: timedelta | None = None,
         schedule_at: datetime | None = None,
-        id: str | None = None,  # noqa: A002
     ) -> ScheduledTask[TResult]:
         if self._scheduled_broker is None:
-            raise ValueError
+            msg = f"{self.__class__.__name__}.scheduled_broker must be set in order to publish scheduled tasks"
+            raise ImproperlyConfiguredError(msg)
 
         if after is None and schedule_at is None:
-            raise ValueError
+            # Should be unreachable due to enqueue overloads
+            raise ValueError  # pragma: no cover
 
-        record = serialize_task(
-            task,
-            default_backend=self._config.default_serialization_backend,
-            serialization_backends=self._config.serialization_backends,
-            id=id,
-        )
         if after is not None:
             schedule_at = utc_now() + after
 
