@@ -30,9 +30,6 @@ class RedisMeta:
 @dataclasses.dataclass(kw_only=True, slots=True)
 class RedisBrokerConfig:
     stream_name: Annotated[str, Doc("Stream name in redis (key name)")] = "async-queue"
-    delayed_set_name: Annotated[str, Doc("Name of set used for delayed tasks")] = (
-        "aiotaskqueue-delayed-tasks"
-    )
     maintenance_lock_name: str = "aiotaskqueue-maintenance-lock"
     maintenance_lock_timeout: timedelta = timedelta(minutes=10)
     group_name: Annotated[
