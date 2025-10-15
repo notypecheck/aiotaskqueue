@@ -2,10 +2,10 @@ from aiotaskqueue.result.sql.sqlalchemy.backend import (
     SqlalchemyPostgresResultBackend,
     SqlalchemyResultBackendConfig,
 )
-from aiotaskqueue.result.sql.sqlalchemy.models import PostgresResultTaskMixin
+from aiotaskqueue.result.sql.sqlalchemy.models import SqlalchemyResultTaskMixin
 
 __all__ = [
-    "PostgresResultTaskMixin",
     "SqlalchemyPostgresResultBackend",
     "SqlalchemyResultBackendConfig",
+    "SqlalchemyResultTaskMixin",
 ]

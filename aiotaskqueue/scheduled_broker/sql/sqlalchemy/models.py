@@ -10,11 +10,9 @@ from aiotaskqueue.serialization import SerializationBackendId
 datetime_tz = Annotated[datetime, mapped_column(DateTime(timezone=True))]
 
 
-class TaskStatus(enum.Enum):
+class ScheduledTaskStatus(enum.Enum):
     PENDING = enum.auto()
-    IN_PROCESS = enum.auto()
-    SUCCESS = enum.auto()
-    FAILED = enum.auto()
+    SCHEDULED = enum.auto()
 
 
 class _TaskPayloadMixin:
@@ -31,24 +29,18 @@ class _TaskPayloadMixin:
     meta: Mapped[dict[str, Any]] = mapped_column(JSON())
 
 
-class SqlalchemyBrokerTaskMixin(_TaskPayloadMixin):
-    __tablename__ = "aiotaskqueue_task"
+class SqlalchemyScheduledTaskMixin(_TaskPayloadMixin):
+    __tablename__ = "aiotaskqueue_scheduled_task"
     __table_args__ = (
         Index(
-            "ix_aiotaskqueue_task_queue_name_enqueue_time",
-            "queue_name",
-            "enqueue_time",
+            "ix_aiotaskqueue_scheduled_task_scheduled_at_id",
+            "scheduled_at",
             "id",
             postgresql_where="status = 'PENDING'",
         ),
-        Index(
-            "ix_aiotaskqueue_task_queue_name_latest_healtcheck",
-            "queue_name",
-            "latest_healtcheck",
-            postgresql_where="status = 'IN_PROCESS'",
-        ),
     )
 
-    queue_name: Mapped[str] = mapped_column()
-    status: Mapped[TaskStatus] = mapped_column(Enum(TaskStatus, native_enum=False))
-    latest_healtcheck: Mapped[datetime_tz]
+    status: Mapped[ScheduledTaskStatus] = mapped_column(
+        Enum(ScheduledTaskStatus, native_enum=False)
+    )
+    scheduled_at: Mapped[datetime_tz]

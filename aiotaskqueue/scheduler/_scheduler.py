@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import warnings
 from asyncio import PriorityQueue
 from collections.abc import Callable, Coroutine, Mapping, Sequence
 from datetime import datetime
@@ -16,14 +17,14 @@ if TYPE_CHECKING:
     from aiotaskqueue.tasks import TaskDefinition
 
 
-class Scheduler:
+class RecurringScheduler:
     def __init__(
         self,
         publisher: Publisher,
         tasks: TaskRouter | Sequence[TaskDefinition[Any, Any]],
         *,
         configuration: Configuration | None = None,
-        sleep: Callable[[float], Coroutine[None, None, None]] = asyncio.sleep,
+        sleep: Callable[[float], Coroutine[Any, Any, None]] = asyncio.sleep,
     ) -> None:
         self.tasks: Mapping[str, TaskDefinition[Any, Any]] = {
             task.name: task for task in extract_tasks(tasks) if task.schedule
@@ -85,3 +86,25 @@ class Scheduler:
         schedule_datetime = task.schedule.next_schedule(now)
         await self._scheduled_tasks.put((schedule_datetime, task.name))
         return schedule_datetime
+
+
+class Scheduler(RecurringScheduler):
+    def __init__(
+        self,
+        publisher: Publisher,
+        tasks: TaskRouter | Sequence[TaskDefinition[Any, Any]],
+        *,
+        configuration: Configuration | None = None,
+        sleep: Callable[[float], Coroutine[Any, Any, None]] = asyncio.sleep,
+    ) -> None:
+        warnings.warn(
+            "Scheduler is deprecated. Use RecurringScheduler instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(
+            publisher=publisher,
+            tasks=tasks,
+            configuration=configuration,
+            sleep=sleep,
+        )

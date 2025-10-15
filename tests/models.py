@@ -1,8 +1,13 @@
 from datetime import datetime
 
 import msgspec
-from aiotaskqueue.broker.sql.sqlalchemy.models import PostgresBrokerTaskMixin
-from aiotaskqueue.result.sql.sqlalchemy.models import PostgresResultTaskMixin
+from aiotaskqueue.broker.sql.sqlalchemy.models import (
+    SqlalchemyBrokerTaskMixin,
+)
+from aiotaskqueue.result.sql.sqlalchemy.models import SqlalchemyResultTaskMixin
+from aiotaskqueue.scheduled_broker.sql.sqlalchemy.models import (
+    SqlalchemyScheduledTaskMixin,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -15,7 +20,10 @@ class MsgspecModel(msgspec.Struct):
 class Base(DeclarativeBase): ...
 
 
-class PostgresBrokerTask(PostgresBrokerTaskMixin, Base): ...
+class SqlalchemyBrokerTask(SqlalchemyBrokerTaskMixin, Base): ...
 
 
-class PostgresResultTask(PostgresResultTaskMixin, Base): ...
+class SqlalchemyScheduledTask(SqlalchemyScheduledTaskMixin, Base): ...
+
+
+class SqlalchemyResultTask(SqlalchemyResultTaskMixin, Base): ...

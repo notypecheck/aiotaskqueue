@@ -12,8 +12,9 @@ from testcontainers.postgres import PostgresContainer  # type: ignore[import-unt
 
 from tests.models import (
     Base,
-    PostgresBrokerTask,
-    PostgresResultTask,
+    SqlalchemyBrokerTask,
+    SqlalchemyResultTask,
+    SqlalchemyScheduledTask,
 )
 
 
@@ -54,8 +55,9 @@ async def sqlalchemy_session_maker(
     yield _sqlalchemy_session_maker
 
     async with _sqlalchemy_session_maker.begin() as session:
-        await session.execute(delete(PostgresBrokerTask))
-        await session.execute(delete(PostgresResultTask))
+        await session.execute(delete(SqlalchemyBrokerTask))
+        await session.execute(delete(SqlalchemyResultTask))
+        await session.execute(delete(SqlalchemyScheduledTask))
 
 
 @pytest.fixture

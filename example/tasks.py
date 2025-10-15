@@ -1,6 +1,6 @@
 from aiotaskqueue import TaskRouter
 from aiotaskqueue._util import utc_now
-from aiotaskqueue.scheduler import crontab
+from aiotaskqueue.scheduler.schedules import crontab
 from msgspec import Struct
 from pydantic import BaseModel
 

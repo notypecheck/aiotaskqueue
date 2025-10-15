@@ -13,7 +13,7 @@ from typing_extensions import Doc
 from aiotaskqueue._util import run_until_stopped, utc_now
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.broker.sql.sqlalchemy.models import (
-    PostgresBrokerTaskMixin,
+    SqlalchemyBrokerTaskMixin,
     TaskStatus,
 )
 from aiotaskqueue.config import Configuration
@@ -23,7 +23,7 @@ from aiotaskqueue.tasks import BrokerTask
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class SqlalchemyBrokerConfig:
-    task_table: type[PostgresBrokerTaskMixin]
+    task_table: type[SqlalchemyBrokerTaskMixin]
     queue_name: str = "default"
     read_count: Annotated[
         int,
@@ -75,29 +75,29 @@ class SqlalchemyPostgresBroker(Broker):
         stmt = insert(table).values(
             {
                 table.id: task.id,
-                table.queue_name: self._broker_config.queue_name,
-                table.status: TaskStatus.PENDING,
-                table.latest_healtcheck: now,
                 table.task_name: task.task_name,
                 table.requeue_count: task.requeue_count,
                 table.enqueue_time: now,
                 table.args: task.args,
                 table.kwargs: task.kwargs,
                 table.meta: task.meta,
+                table.status: TaskStatus.PENDING,
+                table.queue_name: self._broker_config.queue_name,
+                table.latest_healtcheck: now,
             }
         )
         on_conflict_stmt = stmt.on_conflict_do_update(
             index_elements=[table.id],
             set_={
-                table.queue_name: stmt.excluded.queue_name,
-                table.status: stmt.excluded.status,
-                table.latest_healtcheck: stmt.excluded.latest_healtcheck,
                 table.task_name: stmt.excluded.task_name,
                 table.requeue_count: stmt.excluded.requeue_count,
                 table.enqueue_time: stmt.excluded.enqueue_time,
                 table.args: stmt.excluded.args,
                 table.kwargs: stmt.excluded.kwargs,
                 table.meta: stmt.excluded.meta,
+                table.status: stmt.excluded.status,
+                table.queue_name: stmt.excluded.queue_name,
+                table.latest_healtcheck: stmt.excluded.latest_healtcheck,
             },
         )
         async with self._session_maker.begin() as session:
