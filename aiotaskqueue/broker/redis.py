@@ -30,6 +30,8 @@ class RedisMeta:
 @dataclasses.dataclass(kw_only=True, slots=True)
 class RedisBrokerConfig:
     stream_name: Annotated[str, Doc("Stream name in redis (key name)")] = "async-queue"
+    maintenance_lock_name: str = "aiotaskqueue-maintenance-lock"
+    maintenance_lock_timeout: timedelta = timedelta(minutes=10)
     group_name: Annotated[
         str,
         Doc(
@@ -173,54 +175,70 @@ class RedisBroker(BrokerAckContextMixin, Broker):
         min_idle_time: timedelta,
     ) -> None:
         """Requeues messages that weren't ACKed in time."""
-        claimed = await self._redis.xautoclaim(
-            self._broker_config.stream_name,
-            self._broker_config.group_name,
-            self._consumer_name,
-            count=1000,
-            min_idle_time=int(min_idle_time.total_seconds() * 1000),
+        lock = self._redis.lock(
+            self._broker_config.maintenance_lock_name,
+            timeout=self._broker_config.maintenance_lock_timeout.total_seconds(),
         )
-        logger.debug("Claimed %s", claimed)
+        if await lock.locked():
+            return
 
-        _, messages, _ = claimed
-        for record_id, record in messages:
-            task = msgspec.json.decode(record[b"value"], type=TaskRecord)
-            task.requeue_count += 1
-            await self.enqueue(task)
-            await self._redis.xack(  # type: ignore[no-untyped-call]
+        async with lock:
+            claimed = await self._redis.xautoclaim(
                 self._broker_config.stream_name,
                 self._broker_config.group_name,
-                record_id,
+                self._consumer_name,
+                count=1000,
+                min_idle_time=int(min_idle_time.total_seconds() * 1000),
             )
+            logger.debug("Claimed %s", claimed)
+
+            _, messages, _ = claimed
+            for record_id, record in messages:
+                task = msgspec.json.decode(record[b"value"], type=TaskRecord)
+                task.requeue_count += 1
+                await self.enqueue(task)
+                await self._redis.xack(  # type: ignore[no-untyped-call]
+                    self._broker_config.stream_name,
+                    self._broker_config.group_name,
+                    record_id,
+                )
 
     async def _trim_stream(self) -> None:
         """Trims stream up to the last delivered/pending message."""
-        consumer_groups = await self._redis.xinfo_groups(  # type: ignore[no-untyped-call]
-            self._broker_config.stream_name
+        lock = self._redis.lock(
+            self._broker_config.maintenance_lock_name,
+            timeout=self._broker_config.maintenance_lock_timeout.total_seconds(),
         )
-        min_message_ids = []
-        for consumer_group in consumer_groups:
-            pending = await self._redis.xpending_range(
-                self._broker_config.stream_name,
-                groupname=consumer_group["name"],
-                min="-",
-                max="+",
-                count=1,
-            )
-            if not pending:
-                continue
-            min_message_ids.append(pending[0]["message_id"].decode())
+        if await lock.locked():
+            return
 
-        if min_message_ids:
-            # If messages are in PEL they've already been read, and we don't have to use last delivered id
-            target = min(min_message_ids, key=_message_id_key)
-        else:
-            target = min(
-                [group["last-delivered-id"].decode() for group in consumer_groups],
-                key=_message_id_key,
+        async with lock:
+            consumer_groups = await self._redis.xinfo_groups(  # type: ignore[no-untyped-call]
+                self._broker_config.stream_name
             )
+            min_message_ids = []
+            for consumer_group in consumer_groups:
+                pending = await self._redis.xpending_range(
+                    self._broker_config.stream_name,
+                    groupname=consumer_group["name"],
+                    min="-",
+                    max="+",
+                    count=1,
+                )
+                if not pending:
+                    continue
+                min_message_ids.append(pending[0]["message_id"].decode())
 
-        await self._redis.xtrim(self._broker_config.stream_name, minid=target)
+            if min_message_ids:
+                # If messages are in PEL they've already been read, and we don't have to use last delivered id
+                target = min(min_message_ids, key=_message_id_key)
+            else:
+                target = min(
+                    [group["last-delivered-id"].decode() for group in consumer_groups],
+                    key=_message_id_key,
+                )
+
+            await self._redis.xtrim(self._broker_config.stream_name, minid=target)
 
     async def ack(self, task: BrokerTask[RedisMeta]) -> None:
         await self._redis.xack(  # type: ignore[no-untyped-call]
