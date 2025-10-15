@@ -4,12 +4,7 @@
 
 - **redis**: acquire lock when trying to perform maintenance tasks
 - scheduled task broker
-- sqlalchemy broker & result backend
-
-### Fix
-
-- read ordering
-- ruff
+- sqlalchemy broker & result backenC
 
 ### Refactor
 
