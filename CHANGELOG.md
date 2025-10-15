@@ -1,3 +1,20 @@
+## 0.14.0 (2025-10-15)
+
+### Feat
+
+- **redis**: acquire lock when trying to perform maintenance tasks
+- scheduled task broker
+- sqlalchemy broker & result backend
+
+### Fix
+
+- read ordering
+- ruff
+
+### Refactor
+
+- move serialize_task call into Publisher.enqueue
+
 ## 0.13.1 (2025-05-23)
 
 ### Fix
