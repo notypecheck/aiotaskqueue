@@ -72,8 +72,8 @@ class RedisScheduledBroker(ScheduledBroker):
 
         yield [msgspec.json.decode(record, type=TaskRecord) for record in raw_records]
 
-        await self._redis.zremrangebyscore(
-            name=self._broker_config.schedule_set_name,
-            min="-inf",
-            max=timestamp,
-        )
+        if raw_records:
+            await self._redis.zrem(
+                self._broker_config.schedule_set_name,
+                *raw_records,
+            )

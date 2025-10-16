@@ -70,21 +70,30 @@ class SqlalchemyPostgresBroker(Broker):
             await self.ack(task=task, status=TaskStatus.SUCCESS)
 
     async def enqueue(self, task: TaskRecord) -> None:
+        await self.enqueue_batch((task,))
+
+    async def enqueue_batch(self, tasks: Sequence[TaskRecord]) -> None:
+        if not tasks:
+            return
+
         table = self._broker_config.task_table
         now = utc_now()
         stmt = insert(table).values(
-            {
-                table.id: task.id,
-                table.task_name: task.task_name,
-                table.requeue_count: task.requeue_count,
-                table.enqueue_time: now,
-                table.args: task.args,
-                table.kwargs: task.kwargs,
-                table.meta: task.meta,
-                table.status: TaskStatus.PENDING,
-                table.queue_name: self._broker_config.queue_name,
-                table.latest_healtcheck: now,
-            }
+            [
+                {
+                    table.id: task.id,
+                    table.task_name: task.task_name,
+                    table.requeue_count: task.requeue_count,
+                    table.enqueue_time: now,
+                    table.args: task.args,
+                    table.kwargs: task.kwargs,
+                    table.meta: task.meta,
+                    table.status: TaskStatus.PENDING,
+                    table.queue_name: self._broker_config.queue_name,
+                    table.latest_healtcheck: now,
+                }
+                for task in tasks
+            ]
         )
         on_conflict_stmt = stmt.on_conflict_do_update(
             index_elements=[table.id],
