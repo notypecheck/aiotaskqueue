@@ -15,7 +15,7 @@ from tests.utils import capture_broker_messages
 BASE_DATETIME = datetime(2000, 1, 1, tzinfo=UTC)
 
 
-@task(name="every-task", schedule=every(timedelta(minutes=5)))
+@task(name="every-task", markers=[every(timedelta(minutes=5))])
 async def every_task() -> None:
     pass
 

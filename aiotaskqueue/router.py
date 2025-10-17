@@ -4,7 +4,6 @@ from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
 from aiotaskqueue._types import P, TResult
-from aiotaskqueue.scheduler.abc import Schedule
 from aiotaskqueue.tasks import Marker, TaskDefinition
 
 
@@ -16,10 +15,9 @@ class TaskRouter:
         self,
         name: str,
         markers: Sequence[Marker] = (),
-        schedule: Schedule | None = None,
     ) -> Callable[[Callable[P, Awaitable[TResult]]], TaskDefinition[P, TResult]]:
         def inner(func: Callable[P, Awaitable[TResult]]) -> TaskDefinition[P, TResult]:
-            instance = task(name=name, markers=markers, schedule=schedule)(func)
+            instance = task(name=name, markers=markers)(func)
             self.tasks[instance.name] = instance
             return instance
 
@@ -37,9 +35,8 @@ class TaskRouter:
 def task(
     name: str,
     markers: Sequence[Marker] = (),
-    schedule: Schedule | None = None,
 ) -> Callable[[Callable[P, Awaitable[TResult]]], TaskDefinition[P, TResult]]:
     def inner(func: Callable[P, Awaitable[TResult]]) -> TaskDefinition[P, TResult]:
-        return TaskDefinition(name=name, markers=markers, schedule=schedule, func=func)
+        return TaskDefinition(name=name, markers=markers, func=func)
 
     return inner
