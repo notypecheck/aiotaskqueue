@@ -91,6 +91,19 @@ class RedisBroker(BrokerAckContextMixin, Broker):
                 {"value": msgspec.json.encode(task)},
             )
 
+    async def enqueue_batch(self, tasks: Sequence[TaskRecord]) -> None:
+        if not tasks:
+            return
+
+        async with self._sem:
+            pipe = self._redis.pipeline()
+            for task in tasks:
+                pipe.xadd(
+                    self._broker_config.stream_name,
+                    {"value": msgspec.json.encode(task)},
+                )
+            await pipe.execute()
+
     async def __aenter__(self) -> Self:
         if self._is_initialized:
             return self
