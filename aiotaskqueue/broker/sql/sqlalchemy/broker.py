@@ -13,7 +13,7 @@ from typing_extensions import Doc
 
 from aiotaskqueue._util import run_until_stopped, utc_now
 from aiotaskqueue.broker.abc import Broker
-from aiotaskqueue.broker.sql.sqlalchemy._utls import pool
+from aiotaskqueue.broker.sql.sqlalchemy._utils import pool
 from aiotaskqueue.broker.sql.sqlalchemy.models import (
     SqlalchemyBrokerTaskMixin,
     TaskStatus,
@@ -166,7 +166,7 @@ class SqlalchemyPostgresBroker(Broker):
                         key=lambda item: (item.enqueue_time, item.id),
                     )
                 ]
-        return []
+        return []  # typecheck moment
 
     async def ack(
         self,
