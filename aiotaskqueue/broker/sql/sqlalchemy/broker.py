@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import dataclasses
 from collections.abc import AsyncIterator, Sequence
+from datetime import timedelta
 from types import TracebackType
 from typing import Annotated, Any, Self
 
@@ -12,6 +13,7 @@ from typing_extensions import Doc
 
 from aiotaskqueue._util import run_until_stopped, utc_now
 from aiotaskqueue.broker.abc import Broker
+from aiotaskqueue.broker.sql.sqlalchemy._utls import pool
 from aiotaskqueue.broker.sql.sqlalchemy.models import (
     SqlalchemyBrokerTaskMixin,
     TaskStatus,
@@ -29,6 +31,14 @@ class SqlalchemyBrokerConfig:
         int,
         Doc("Amount of entries to read from table at once"),
     ] = 1
+    read_block_times: Annotated[
+        Sequence[timedelta],
+        Doc("Block reading if there is no pending task"),
+    ] = (
+        timedelta(seconds=1),
+        timedelta(seconds=2),
+        timedelta(seconds=5),
+    )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -131,27 +141,32 @@ class SqlalchemyPostgresBroker(Broker):
             .where(table.id.in_(pending_records_cte))
             .returning(table)
         )
+        async for _ in pool(self._broker_config.read_block_times):
+            async with self._session_maker.begin() as session:
+                records = (await session.scalars(stmt)).all()
 
-        async with self._session_maker.begin() as session:
-            records = sorted(
-                (await session.scalars(stmt)).all(),
-                key=lambda item: (item.enqueue_time, item.id),
-            )
-            return [
-                BrokerTask(
-                    meta=SqlalchemyBrokerMeta(id=record.id),
-                    task=TaskRecord(
-                        id=record.id,
-                        task_name=record.task_name,
-                        requeue_count=record.requeue_count,
-                        enqueue_time=record.enqueue_time,
-                        args=record.args,
-                        kwargs=record.kwargs,
-                        meta=record.meta,
-                    ),
-                )
-                for record in records
-            ]
+                if not records:
+                    continue
+
+                return [
+                    BrokerTask(
+                        meta=SqlalchemyBrokerMeta(id=record.id),
+                        task=TaskRecord(
+                            id=record.id,
+                            task_name=record.task_name,
+                            requeue_count=record.requeue_count,
+                            enqueue_time=record.enqueue_time,
+                            args=record.args,
+                            kwargs=record.kwargs,
+                            meta=record.meta,
+                        ),
+                    )
+                    for record in sorted(
+                        records,
+                        key=lambda item: (item.enqueue_time, item.id),
+                    )
+                ]
+        return []
 
     async def ack(
         self,

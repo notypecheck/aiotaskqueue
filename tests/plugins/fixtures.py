@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator, Mapping
+from datetime import timedelta
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -90,7 +91,10 @@ async def sqlalchemy_broker(
 ) -> AsyncIterator[SqlalchemyPostgresBroker]:
     async with SqlalchemyPostgresBroker(
         engine=sqlalchemy_session_maker,
-        broker_config=SqlalchemyBrokerConfig(task_table=SqlalchemyBrokerTask),
+        broker_config=SqlalchemyBrokerConfig(
+            task_table=SqlalchemyBrokerTask,
+            read_block_times=(timedelta(),),
+        ),
     ) as broker:
         yield broker
 
