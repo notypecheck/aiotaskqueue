@@ -98,7 +98,7 @@ async def sqlalchemy_broker(
         engine=sqlalchemy_session_maker,
         broker_config=SqlalchemyBrokerConfig(
             task_table=SqlalchemyBrokerTask,
-            read_block_times=(timedelta(microseconds=50),),
+            read_block_times=(timedelta(),),
         ),
     ) as broker:
         yield broker
