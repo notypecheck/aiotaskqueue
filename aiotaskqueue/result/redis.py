@@ -7,7 +7,7 @@ from aiotaskqueue.broker.redis import RedisClient
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.serialization import SerializationBackendId, serialize
-from aiotaskqueue.tasks import RunningTask, TaskDefinition
+from aiotaskqueue.tasks import RunningTask, TaskDefinition, TaskInstance
 from aiotaskqueue.types import Some
 
 
@@ -37,7 +37,7 @@ class RedisResultBackend(ResultBackend):
     async def get(
         self,
         task_id: str,
-        definition: TaskDefinition[Any, TResult],
+        definition: TaskDefinition[Any, TResult] | TaskInstance[Any, TResult],
     ) -> Some[TResult] | None:
         raw_value = await self._redis.get(self._cache_key(task_id))
         if raw_value is None:
@@ -62,7 +62,7 @@ class RedisResultBackend(ResultBackend):
 
         result = await self._deserialize(
             raw_value,
-            return_type=task.instance.task.return_type,
+            return_type=task.instance.return_type,
         )
         return cast("TResult", result)
 

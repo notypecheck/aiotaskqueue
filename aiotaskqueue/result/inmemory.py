@@ -8,7 +8,7 @@ from aiotaskqueue._types import TResult
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.serialization import SerializationBackendId, serialize
-from aiotaskqueue.tasks import RunningTask, TaskDefinition
+from aiotaskqueue.tasks import RunningTask, TaskDefinition, TaskInstance
 from aiotaskqueue.types import Some
 
 
@@ -49,7 +49,7 @@ class InMemoryResultBackend(ResultBackend):
             Doc("Task id"),
         ],
         definition: Annotated[
-            TaskDefinition[Any, TResult],
+            TaskDefinition[Any, TResult] | TaskInstance[Any, TResult],
             Doc("Task definition for the task you're trying to retrieve."),
         ],
     ) -> Some[TResult] | None:
@@ -74,7 +74,7 @@ class InMemoryResultBackend(ResultBackend):
                 result = self._deserialize(
                     backend_id=backend_id,
                     value=value,
-                    return_type=task.instance.task.return_type,
+                    return_type=task.instance.return_type,
                 )
                 return cast("TResult", result)
             await asyncio.sleep(self._poll_interval)

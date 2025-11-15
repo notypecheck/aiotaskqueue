@@ -13,7 +13,7 @@ from aiotaskqueue.config import Configuration
 from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.result.sql.sqlalchemy.models import SqlalchemyResultTaskMixin
 from aiotaskqueue.serialization import SerializationBackendId, serialize
-from aiotaskqueue.tasks import RunningTask, TaskDefinition
+from aiotaskqueue.tasks import RunningTask, TaskDefinition, TaskInstance
 from aiotaskqueue.types import Some
 
 
@@ -77,7 +77,7 @@ class SqlalchemyPostgresResultBackend(ResultBackend):
             Doc("Task id"),
         ],
         definition: Annotated[
-            TaskDefinition[Any, TResult],
+            TaskDefinition[Any, TResult] | TaskInstance[Any, TResult],
             Doc("Task definition for the task you're trying to retrieve."),
         ],
     ) -> Some[TResult] | None:
@@ -114,7 +114,7 @@ class SqlalchemyPostgresResultBackend(ResultBackend):
                 if model is not None:
                     result = self._deserialize(
                         model.value,
-                        return_type=task.instance.task.return_type,
+                        return_type=task.instance.return_type,
                     )
                     return cast("TResult", result)
             await asyncio.sleep(poll_interval)

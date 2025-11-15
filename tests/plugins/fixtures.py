@@ -29,6 +29,7 @@ from aiotaskqueue.scheduled_broker.sql.sqlalchemy.schedulerd_broker import (
     SqlalchemyScheduledBrokerConfig,
 )
 from aiotaskqueue.serialization.msgspec import MsgSpecSerializer
+from aiotaskqueue.serialization.pydantic import PydanticSerializer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tests.models import (
@@ -42,6 +43,10 @@ from tests.models import (
 def configuration() -> Configuration:
     return Configuration(
         default_serialization_backend=MsgSpecSerializer(),
+        serialization_backends=[
+            MsgSpecSerializer(),
+            PydanticSerializer(),
+        ],
     )
 
 
@@ -93,7 +98,7 @@ async def sqlalchemy_broker(
         engine=sqlalchemy_session_maker,
         broker_config=SqlalchemyBrokerConfig(
             task_table=SqlalchemyBrokerTask,
-            read_block_times=(timedelta(),),
+            read_block_times=(timedelta(microseconds=50),),
         ),
     ) as broker:
         yield broker

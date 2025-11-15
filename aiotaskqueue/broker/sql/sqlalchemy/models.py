@@ -42,13 +42,13 @@ class SqlalchemyBrokerTaskMixin(_TaskPayloadMixin):
             postgresql_where="status = 'PENDING'",
         ),
         Index(
-            "ix_aiotaskqueue_task_queue_name_latest_healtcheck",
+            "ix_aiotaskqueue_task_queue_name_latest_healthcheck",
             "queue_name",
-            "latest_healtcheck",
+            "latest_healthcheck",
             postgresql_where="status = 'IN_PROCESS'",
         ),
     )
 
     queue_name: Mapped[str] = mapped_column()
     status: Mapped[TaskStatus] = mapped_column(Enum(TaskStatus, native_enum=False))
-    latest_healtcheck: Mapped[datetime_tz]
+    latest_healthcheck: Mapped[datetime_tz]

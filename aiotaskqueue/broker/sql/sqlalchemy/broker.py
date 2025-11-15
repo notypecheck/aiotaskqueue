@@ -100,7 +100,7 @@ class SqlalchemyPostgresBroker(Broker):
                     table.meta: task.meta,
                     table.status: TaskStatus.PENDING,
                     table.queue_name: self._broker_config.queue_name,
-                    table.latest_healtcheck: now,
+                    table.latest_healthcheck: now,
                 }
                 for task in tasks
             ]
@@ -116,7 +116,7 @@ class SqlalchemyPostgresBroker(Broker):
                 table.meta: stmt.excluded.meta,
                 table.status: stmt.excluded.status,
                 table.queue_name: stmt.excluded.queue_name,
-                table.latest_healtcheck: stmt.excluded.latest_healtcheck,
+                table.latest_healthcheck: stmt.excluded.latest_healthcheck,
             },
         )
         async with self._session_maker.begin() as session:
@@ -144,10 +144,8 @@ class SqlalchemyPostgresBroker(Broker):
         async for _ in pool(self._broker_config.read_block_times):
             async with self._session_maker.begin() as session:
                 records = (await session.scalars(stmt)).all()
-
                 if not records:
                     continue
-
                 return [
                     BrokerTask(
                         meta=SqlalchemyBrokerMeta(id=record.id),
@@ -207,7 +205,7 @@ class SqlalchemyPostgresBroker(Broker):
             .where(
                 table.queue_name == self._broker_config.queue_name,
                 table.status == TaskStatus.IN_PROCESS,
-                table.latest_healtcheck < (utc_now() - config.task.timeout_interval),
+                table.latest_healthcheck < (utc_now() - config.task.timeout_interval),
             )
         )
         async with self._session_maker.begin() as session:
@@ -218,7 +216,7 @@ class SqlalchemyPostgresBroker(Broker):
 
         stmt = (
             update(table)
-            .values(latest_healtcheck=utc_now())
+            .values(latest_healthcheck=utc_now())
             .where(table.id.in_(task.meta.id for task in tasks))
         )
         async with self._session_maker.begin() as session:
