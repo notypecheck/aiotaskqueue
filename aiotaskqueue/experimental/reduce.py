@@ -11,7 +11,7 @@ from aiotaskqueue.config import Configuration
 from aiotaskqueue.router import task
 from aiotaskqueue.serialization import SerializationBackendId, serialize
 from aiotaskqueue.tasks import TaskDefinition, TaskInstance
-from aiotaskqueue.types import NO_RESULT, CurrentTaskId
+from aiotaskqueue.types import NO_RESULT, CurrentTaskId, NoResult
 from aiotaskqueue.worker import ExecutionContext
 
 _A = TypeVar("_A")
@@ -129,7 +129,7 @@ async def reduce_task(
     state: ReduceTaskState,
     current_id: CurrentTaskId = INJECTED,
     context: ExecutionContext = INJECTED,
-) -> object:
+) -> NoResult:
     if not context.result_backend:
         err_msg = "Result backend must be enabled in order to use reduce"
         raise ValueError(err_msg)
@@ -158,7 +158,9 @@ async def reduce_task(
                 break
             await asyncio.sleep(state.sleep.total_seconds())
 
-        if state.current_task_index >= len(state.tasks):
+        if state.current_task_index >= len(state.tasks) and not isinstance(
+            args, NoResult
+        ):
             await context.result_backend.set(
                 task_id=state.result_task_id,  # type: ignore[arg-type]
                 value=args,
