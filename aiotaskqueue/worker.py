@@ -20,6 +20,7 @@ from aiotaskqueue.result.abc import ResultBackend
 from aiotaskqueue.router import TaskRouter
 from aiotaskqueue.serialization import TaskRecord, deserialize_task
 from aiotaskqueue.tasks import BrokerTask, TaskDefinition
+from aiotaskqueue.types import CurrentTaskDefinition, CurrentTaskId, NoResult
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -173,7 +174,7 @@ class AsyncWorker:
             finally:
                 self._active_tasks.pop(broker_task.task.id, None)
 
-            if self._result_backend:
+            if self._result_backend and not isinstance(result, NoResult):
                 await self._result_backend.set(task_id=task.id, value=result)
 
             for on_task_completion in self._ext_on_task_completion:
@@ -197,10 +198,19 @@ class AsyncWorker:
         )
         for key, value in _dependencies_to_inject(
             task_definition.func,
-            types=(ExecutionContext,),
+            types=(
+                ExecutionContext,
+                CurrentTaskId,
+                CurrentTaskDefinition,
+            ),
         ).items():
+            obj: ExecutionContext | str | TaskDefinition[[Any], Any]
             if value is ExecutionContext:
                 obj = execution_context
+            elif value is CurrentTaskId:
+                obj = task.id
+            elif value is CurrentTaskDefinition:
+                obj = task_definition
             else:
                 raise ValueError
             kwargs.setdefault(key, obj)

@@ -3,7 +3,7 @@ from typing import Annotated, Any, Protocol
 from typing_extensions import Doc
 
 from aiotaskqueue._types import TResult
-from aiotaskqueue.tasks import RunningTask, TaskDefinition
+from aiotaskqueue.tasks import RunningTask, TaskDefinition, TaskInstance
 from aiotaskqueue.types import Some
 
 
@@ -30,7 +30,7 @@ class ResultBackend(Protocol):
             Doc("Task id"),
         ],
         definition: Annotated[
-            TaskDefinition[Any, TResult],
+            TaskDefinition[Any, TResult] | TaskInstance[Any, TResult],
             Doc("Task definition for the task you're trying to retrieve."),
         ],
     ) -> Some[TResult] | None:

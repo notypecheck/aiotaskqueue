@@ -6,7 +6,7 @@ import typing
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import datetime
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 from aiotaskqueue._types import P, TResult
 
@@ -48,7 +48,10 @@ class TaskDefinition(Generic[P, TResult]):
         return {p.name: p.annotation for p in sig.parameters.values()}
 
 
-@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+_T = TypeVar("_T")
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
 class TaskInstance(Generic[P, TResult]):
     task: TaskDefinition[P, TResult]
     # It doesn't seem to be possible to type args and kwargs here:
@@ -56,6 +59,16 @@ class TaskInstance(Generic[P, TResult]):
     # https://github.com/python/mypy/pull/18278
     args: tuple[object, ...]
     kwargs: Mapping[str, object]
+
+    _override_return_type: type[TResult] | None = None
+
+    @property
+    def return_type(self) -> type[TResult]:
+        return self._override_return_type or self.task.return_type
+
+    def with_return_type(self, return_type: type[_T]) -> TaskInstance[P, _T]:
+        self._override_return_type = return_type  # type: ignore[assignment]
+        return cast("TaskInstance[P, _T]", self)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
