@@ -27,7 +27,7 @@ async def send_email(person: Person, email: Email) -> str:
 
 @router.task(
     name="periodic-task",
-    schedule=crontab("* * * * *"),
+    markers=[crontab("* * * * *")],
 )
 async def periodic_task() -> str:
     print("Periodic task", utc_now())  # noqa: T201

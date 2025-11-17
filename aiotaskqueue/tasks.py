@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 from aiotaskqueue._types import P, TResult
 
 if TYPE_CHECKING:
-    from aiotaskqueue.scheduler.abc import Schedule
     from aiotaskqueue.serialization import TaskRecord
 
 
@@ -23,7 +22,6 @@ class Marker:
 class TaskDefinition(Generic[P, TResult]):
     name: str
     markers: Sequence[Marker] = ()
-    schedule: Schedule | None = None
     func: Callable[P, Awaitable[TResult]]
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> TaskInstance[P, TResult]:
