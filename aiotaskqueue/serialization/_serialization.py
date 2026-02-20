@@ -39,6 +39,9 @@ def serialize(
     return default_backend.id, default_backend.serialize(value)
 
 
+TaskMeta = dict[str, Any]
+
+
 class TaskRecord(msgspec.Struct, kw_only=True):
     id: str
     task_name: str
@@ -46,7 +49,7 @@ class TaskRecord(msgspec.Struct, kw_only=True):
     enqueue_time: datetime
     args: tuple[tuple[SerializationBackendId, str], ...]
     kwargs: dict[str, tuple[SerializationBackendId, str]]
-    meta: dict[str, Any] = msgspec.field(default_factory=dict)
+    meta: TaskMeta = msgspec.field(default_factory=dict)
 
 
 def serialize_task(
@@ -57,6 +60,7 @@ def serialize_task(
         SerializationBackend[Any],
     ],
     id: str | None = None,  # noqa: A002
+    meta: TaskMeta | None = None,
 ) -> TaskRecord:
     args = tuple(
         serialize(
@@ -80,6 +84,7 @@ def serialize_task(
         enqueue_time=utc_now(),
         args=args,
         kwargs=kwargs,
+        meta=meta if meta is not None else {},
     )
 
 

@@ -6,7 +6,7 @@ from aiotaskqueue._util import utc_now
 from aiotaskqueue.broker.abc import Broker, ScheduledBroker
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.errors import ImproperlyConfiguredError
-from aiotaskqueue.serialization import TaskRecord, serialize_task
+from aiotaskqueue.serialization import TaskMeta, TaskRecord, serialize_task
 from aiotaskqueue.tasks import RunningTask, ScheduledTask, TaskInstance
 
 
@@ -27,6 +27,7 @@ class Publisher:
         task: TaskInstance[P, TResult],
         *,
         id: str | None = None,
+        meta: TaskMeta | None = None,
     ) -> RunningTask[TResult]: ...
 
     @overload
@@ -36,6 +37,7 @@ class Publisher:
         *,
         after: timedelta,
         id: str | None = None,
+        meta: TaskMeta | None = None,
     ) -> ScheduledTask[TResult]: ...
 
     @overload
@@ -45,6 +47,7 @@ class Publisher:
         *,
         schedule_at: datetime,
         id: str | None = None,
+        meta: TaskMeta | None = None,
     ) -> ScheduledTask[TResult]: ...
 
     async def enqueue(
@@ -54,12 +57,14 @@ class Publisher:
         after: timedelta | None = None,
         schedule_at: datetime | None = None,
         id: str | None = None,  # noqa: A002
+        meta: TaskMeta | None = None,
     ) -> RunningTask[TResult] | ScheduledTask[TResult]:
         record = serialize_task(
             task,
             default_backend=self._config.default_serialization_backend,
             serialization_backends=self._config.serialization_backends,
             id=id,
+            meta=meta,
         )
         if (after or schedule_at) is not None:
             return await self._enqueue_schedule(

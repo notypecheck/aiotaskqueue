@@ -1,3 +1,5 @@
+import uuid
+
 from aiotaskqueue.broker.abc import Broker
 from aiotaskqueue.config import Configuration
 from aiotaskqueue.publisher import Publisher
@@ -9,13 +11,14 @@ from tests.utils import capture_broker_messages
 
 async def test_enqueue(broker: Broker, publisher: Publisher) -> None:
     task_instance = noop_task()
-
+    meta = {str(uuid.uuid4()): str(uuid.uuid4())}
     async with capture_broker_messages(broker, count=1) as messages:
-        await publisher.enqueue(task=task_instance)
+        await publisher.enqueue(task=task_instance, meta=meta)
 
     assert len(messages) == 1
     message = messages[0]
     assert message.task.task_name == noop_task.name
+    assert message.task.meta == meta
 
 
 async def test_enqueue_with_params(
