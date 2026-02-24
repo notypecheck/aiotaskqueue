@@ -3,7 +3,7 @@ from .config import Configuration, TaskConfiguration
 from .publisher import Publisher
 from .router import TaskRouter, task
 
-__version__ = "0.15.0"
+__version__ = "0.16.0"
 
 __all__ = [
     "INJECTED",

@@ -1,3 +1,9 @@
+## 0.16.0 (2026-02-24)
+
+### Feat
+
+- expose meta parameter on Publisher.enqueue
+
 ## 0.15.0 (2025-11-17)
 
 ### Feat
