@@ -1,6 +1,7 @@
 import asyncio
+import contextlib
 import dataclasses
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from datetime import timedelta
 from types import TracebackType
 from typing import TYPE_CHECKING, Annotated, Self
@@ -56,6 +57,15 @@ def _message_id_key(a: str) -> tuple[int, int]:
 
 
 class RedisBroker(BrokerAckContextMixin, Broker):
+    @contextlib.asynccontextmanager
+    async def ack_context(self, task: BrokerTask[RedisMeta]) -> AsyncIterator[None]:
+        try:
+            yield
+        except Exception:
+            await self.ack(task=task)
+            raise
+        await self.ack(task=task)
+
     def __init__(
         self,
         *,
