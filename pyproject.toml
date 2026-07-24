@@ -28,6 +28,9 @@ scheduler = [
 sqlalchemy = [
     "sqlalchemy[asyncio]>=2.0.43",
 ]
+sentry = [
+    "sentry-sdk>=2.49.0",
+]
 
 [dependency-groups]
 docs = [

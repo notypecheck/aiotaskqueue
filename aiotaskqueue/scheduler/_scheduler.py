@@ -7,11 +7,11 @@ from collections.abc import Callable, Coroutine, Mapping, Sequence
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from aiotaskqueue import Configuration
 from aiotaskqueue._util import ShutdownManager, extract_tasks, utc_now
 from aiotaskqueue.extensions import OnTaskSchedule
 
 if TYPE_CHECKING:
+    from aiotaskqueue import Configuration
     from aiotaskqueue.publisher import Publisher
     from aiotaskqueue.router import TaskRouter
     from aiotaskqueue.tasks import TaskDefinition

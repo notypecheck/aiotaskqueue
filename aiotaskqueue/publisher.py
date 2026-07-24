@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta
-from typing import cast, overload
+from typing import TYPE_CHECKING, cast, overload
 
 from aiotaskqueue._types import P, TResult
 from aiotaskqueue._util import utc_now
 from aiotaskqueue.broker.abc import Broker, ScheduledBroker
-from aiotaskqueue.config import Configuration
 from aiotaskqueue.errors import ImproperlyConfiguredError
 from aiotaskqueue.serialization import TaskMeta, TaskRecord, serialize_task
 from aiotaskqueue.tasks import RunningTask, ScheduledTask, TaskInstance
+
+if TYPE_CHECKING:
+    from aiotaskqueue.config import Configuration
 
 
 class Publisher:

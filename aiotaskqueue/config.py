@@ -7,6 +7,7 @@ from typing import Annotated, Any, Final
 from typing_extensions import Doc
 
 from aiotaskqueue.extensions import AnyExtension
+from aiotaskqueue.extensions.builtin.logging import LoggingExtension
 from aiotaskqueue.serialization import SerializationBackend
 
 
@@ -36,10 +37,35 @@ class ResultBackendConfiguration:
     result_ttl: timedelta = timedelta(days=1)
 
 
+_DefaultExtension = Callable[[Sequence[AnyExtension]], AnyExtension | None]
+
+
+def _logging_extension(extensions: Sequence[AnyExtension]) -> AnyExtension | None:
+    return (
+        None
+        if any(isinstance(e, LoggingExtension) for e in extensions)
+        else LoggingExtension()
+    )
+
+
+def _sentry_extension(extensions: Sequence[AnyExtension]) -> AnyExtension | None:
+    try:
+        from aiotaskqueue.extensions.builtin.sentry import (  # noqa: PLC0415
+            SentryExtension,
+        )
+    except ImportError:
+        return None
+    return (
+        None
+        if any(isinstance(e, SentryExtension) for e in extensions)
+        else SentryExtension()
+    )
+
+
 class Configuration:
     """Configuration is a semi-global object that defines behavior shared between different components, such as serialization, plugins and timeouts."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         task: Annotated[TaskConfiguration | None, Doc("task configuration")] = None,
@@ -52,6 +78,10 @@ class Configuration:
             Doc("list of serialization backends in order of priority"),
         ] = (),
         extensions: Sequence[AnyExtension] = (),
+        default_extensions: Sequence[_DefaultExtension] = (
+            _logging_extension,
+            _sentry_extension,
+        ),
     ) -> None:
         self.task: Final = task or TaskConfiguration()
         self.result: Final = result or ResultBackendConfiguration()
@@ -63,4 +93,11 @@ class Configuration:
                 (default_serialization_backend,),
             )
         }
-        self.extensions = extensions
+        self.extensions: Sequence[AnyExtension] = [
+            *extensions,
+            *(
+                ext
+                for ext in (func(extensions) for func in default_extensions)
+                if ext is not None
+            ),
+        ]

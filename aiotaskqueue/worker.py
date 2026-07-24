@@ -1,17 +1,18 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import dataclasses
 import functools
 import inspect
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import anyio.abc
 from anyio.streams.memory import MemoryObjectReceiveStream
 
 from aiotaskqueue._util import ShutdownManager, TaskManager
 from aiotaskqueue.broker.abc import Broker
-from aiotaskqueue.config import Configuration
 from aiotaskqueue.extensions import OnTaskCompletion, OnTaskException
 from aiotaskqueue.extensions.abc import OnTaskExecution
 from aiotaskqueue.extensions.middleware import MiddlewareStack
@@ -21,6 +22,9 @@ from aiotaskqueue.router import TaskRouter
 from aiotaskqueue.serialization import TaskRecord, deserialize_task
 from aiotaskqueue.tasks import BrokerTask, TaskDefinition
 from aiotaskqueue.types import CurrentTaskDefinition, CurrentTaskId, NoResult
+
+if TYPE_CHECKING:
+    from aiotaskqueue.config import Configuration
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
