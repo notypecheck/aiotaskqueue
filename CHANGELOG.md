@@ -1,3 +1,13 @@
+## 0.17.0 (2026-07-24)
+
+### Feat
+
+- add default extensions with logging and sentry support
+
+### Fix
+
+- **redis**: ack tasks if exception happens during task processing
+
 ## 0.16.0 (2026-02-24)
 
 ### Feat
