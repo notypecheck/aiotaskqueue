@@ -1,3 +1,9 @@
+## 0.18.0 (2026-07-28)
+
+### Feat
+
+- support passing AsyncSession to SqlalchemyPostgresBroker
+
 ## 0.17.0 (2026-07-24)
 
 ### Feat
