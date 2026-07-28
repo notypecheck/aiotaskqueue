@@ -1,7 +1,9 @@
 import asyncio
 import contextlib
 import dataclasses
-from collections.abc import AsyncIterator, Sequence
+import typing
+from collections.abc import AsyncIterator, Callable, Sequence
+from contextlib import AbstractAsyncContextManager
 from datetime import timedelta
 from types import TracebackType
 from typing import Annotated, Any, Self
@@ -49,14 +51,22 @@ class SqlalchemyBrokerMeta:
 class SqlalchemyPostgresBroker(Broker):
     def __init__(
         self,
-        engine: async_sessionmaker[AsyncSession] | AsyncEngine,
+        engine: async_sessionmaker[AsyncSession] | AsyncEngine | AsyncSession,
         broker_config: Annotated[
             SqlalchemyBrokerConfig, Doc("Sqlalchemy specific configuration")
         ],
     ) -> None:
-        self._session_maker = (
-            async_sessionmaker(engine) if isinstance(engine, AsyncEngine) else engine
-        )
+        self._begin: Callable[[], AbstractAsyncContextManager[AsyncSession]]
+        match engine:
+            case AsyncSession():
+                self._begin = lambda: contextlib.nullcontext(engine)
+            case AsyncEngine():
+                self._begin = async_sessionmaker(engine).begin
+            case async_sessionmaker():
+                self._begin = engine.begin
+            case _:
+                typing.assert_never(engine)
+
         self._broker_config = broker_config
 
     async def __aenter__(self) -> Self:
@@ -119,7 +129,7 @@ class SqlalchemyPostgresBroker(Broker):
                 table.latest_healthcheck: stmt.excluded.latest_healthcheck,
             },
         )
-        async with self._session_maker.begin() as session:
+        async with self._begin() as session:
             await session.execute(on_conflict_stmt)
 
     async def read(self) -> Sequence[BrokerTask[Any]]:
@@ -142,7 +152,7 @@ class SqlalchemyPostgresBroker(Broker):
             .returning(table)
         )
         async for _ in pool(self._broker_config.read_block_times):
-            async with self._session_maker.begin() as session:
+            async with self._begin() as session:
                 records = (await session.scalars(stmt)).all()
                 if not records:
                     continue
@@ -175,7 +185,7 @@ class SqlalchemyPostgresBroker(Broker):
         table = self._broker_config.task_table
 
         stmt = update(table).values(status=status).where(table.id == task.task.id)
-        async with self._session_maker.begin() as session:
+        async with self._begin() as session:
             await session.execute(stmt)
 
     async def run_worker_maintenance_tasks(
@@ -208,7 +218,7 @@ class SqlalchemyPostgresBroker(Broker):
                 table.latest_healthcheck < (utc_now() - config.task.timeout_interval),
             )
         )
-        async with self._session_maker.begin() as session:
+        async with self._begin() as session:
             await session.execute(unprocess_task_stmt)
 
     async def tasks_healthcheck(self, *tasks: BrokerTask[Any]) -> None:
@@ -219,5 +229,5 @@ class SqlalchemyPostgresBroker(Broker):
             .values(latest_healthcheck=utc_now())
             .where(table.id.in_(task.meta.id for task in tasks))
         )
-        async with self._session_maker.begin() as session:
+        async with self._begin() as session:
             await session.execute(stmt)
